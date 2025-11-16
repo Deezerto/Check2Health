@@ -12,7 +12,7 @@ export default function Home() {
         <div className="container hero-content">
           <h1>Your Health, On Your Schedule</h1>
           <p>Book your clinic appointments and pre-consultation online.</p>
-          <a href="#" className="btn btn-primary btn-lg">Book an Appointment</a>
+          <a href="#" className="btn btn-green btn-lg">Book an Appointment</a>
         </div>
       </section>
 
