@@ -113,7 +113,7 @@ export default function RegisterStepTwo() {
           </form>
 
           <div className="auth-return">
-            <Link to="/">← Return to Home</Link>
+            <Link to="/register">← Previous Step</Link>
           </div>
         </div>
       </div>

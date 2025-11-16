@@ -1,4 +1,6 @@
 import DashboardNav from '../components/DashboardNav'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const pending = [
   { name:'John Smith', doctor:'Dr. Evelyn Reed', dt:'Nov 17, 2025, 9:00 AM', reason:'I have a fever, this was...' },
@@ -8,11 +10,17 @@ const pending = [
 ]
 
 export default function StaffDashboard(){
+  const navigate = useNavigate()
+  useEffect(()=>{
+    const raw = sessionStorage.getItem('auth.user')
+    if(!raw){ navigate('/login') }
+  },[navigate])
   return (
     <div className="dash-bg">
       <DashboardNav userName="German Velasco" active="Dashboard" items={["Dashboard","My Appointments","Schedules","Analytics"]}/>
 
       <main className="container dash-main">
+        <div className="role-badge">Logged in as Staff</div>
         <h1 className="dash-title">Welcome back, German!</h1>
 
         <div className="stat-row">

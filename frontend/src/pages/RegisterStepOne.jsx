@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 function Progress({ step }) {
@@ -11,8 +12,9 @@ function Progress({ step }) {
 }
 
 export default function RegisterStepOne() {
-  const navigate = useNavigate()
 
+  const navigate = useNavigate()
+  const [show, setShow] = useState({pw:false, confirm:false})
   return (
     <div className="auth-bg">
       <Progress step={1} />
@@ -22,7 +24,7 @@ export default function RegisterStepOne() {
 
           <div className="section-header">CREATE AN ACCOUNT</div>
 
-          <form className="form-grid" onSubmit={(e) => {
+          <form className="form-grid" style={{gap:'18px'}} onSubmit={(e) => {
             e.preventDefault();
             const form = e.currentTarget;
             const email = form.querySelector('input[name=email]').value;
@@ -40,14 +42,20 @@ export default function RegisterStepOne() {
             </label>
 
             <label className="form-label">Password
-              <input name="password" type="password" className="input" required />
+              <div className="input-with-action">
+                <input name="password" type={show.pw ? 'text' : 'password'} className="input" required />
+                <button type="button" className="input-action" onClick={()=>setShow(s=>({...s,pw:!s.pw}))}>{show.pw ? 'Hide' : 'Show'}</button>
+              </div>
             </label>
 
             <label className="form-label">Re-enter password
-              <input name="confirm" type="password" className="input" required />
+              <div className="input-with-action">
+                <input name="confirm" type={show.confirm ? 'text' : 'password'} className="input" required />
+                <button type="button" className="input-action" onClick={()=>setShow(s=>({...s,confirm:!s.confirm}))}>{show.confirm ? 'Hide' : 'Show'}</button>
+              </div>
             </label>
 
-            <button className="btn btn-blue auth-primary" type="submit">NEXT</button>
+            <button className="btn btn-blue auth-primary" type="submit" style={{marginTop:'10px',fontSize:'1.1rem'}}>NEXT</button>
           </form>
 
           <div className="auth-return">

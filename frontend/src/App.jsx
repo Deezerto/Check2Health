@@ -6,6 +6,7 @@ import RegisterStepTwo from './pages/RegisterStepTwo'
 import PatientDashboard from './pages/PatientDashboard'
 import StaffDashboard from './pages/StaffDashboard'
 import DoctorDashboard from './pages/DoctorDashboard'
+import DoctorSchedule from './pages/DoctorSchedule'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
       <Route path="/dashboard/patient" element={<PatientDashboard />} />
       <Route path="/dashboard/staff" element={<StaffDashboard />} />
       <Route path="/dashboard/doctor" element={<DoctorDashboard />} />
+      <Route path="/dashboard/doctor/schedule" element={<DoctorSchedule />} />
       <Route path="*" element={<Home />} />
     </Routes>
   )

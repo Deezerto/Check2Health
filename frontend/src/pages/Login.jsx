@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 export default function Login() {
+
   const [show, setShow] = useState(false)
+  const [error, setError] = useState("")
   const navigate = useNavigate()
 
   const submit = async (e) => {
     e.preventDefault()
+    setError("")
     const form = e.currentTarget
     const payload = {
       identifier: form.identifier.value,
@@ -19,27 +22,43 @@ export default function Login() {
         body: JSON.stringify(payload)
       })
       if (!res.ok) {
-        const txt = await res.text()
-        throw new Error(txt || 'Login failed')
+        let msg = 'Login failed'
+        try {
+          const data = await res.json()
+          msg = data.message || data.error || msg
+        } catch {
+          const txt = await res.text()
+          if (txt && txt.length < 200) msg = txt
+        }
+        if (msg.includes('Invalid credentials')) msg = 'Invalid email/username or password.'
+        setError(msg)
+        return
       }
       const data = await res.json()
       sessionStorage.setItem('auth.user', JSON.stringify(data))
-      navigate('/dashboard/patient')
+      if (data.role === 'DOCTOR') {
+        navigate('/dashboard/doctor')
+      } else if (data.role === 'PATIENT') {
+        navigate('/dashboard/patient')
+      } else {
+        // Fallback to patient dashboard if role not provided
+        navigate('/dashboard/patient')
+      }
     } catch (err) {
-      alert(err.message)
+      setError('Network error. Please try again.')
     }
   }
 
   return (
     <div className="auth-bg">
-      <div className="auth-card">
+      <div className="auth-card login-redesign">
         <div className="auth-card-inner">
           <img src="/assets/logo.png" alt="Check2Health" className="auth-logo" />
-          <h1 className="auth-title">Sign In</h1>
+          <h1 className="auth-title" style={{fontWeight:800, fontSize:'2.2rem', marginTop:'10px', marginBottom:'18px'}}>Sign In</h1>
 
-          <form className="form-grid" onSubmit={submit}>
-            <label className="form-label">Email or Username
-              <input name="identifier" type="text" className="input" placeholder="" required />
+          <form className="form-grid" onSubmit={submit} style={{gap:'16px'}}>
+            <label className="form-label">Email Address
+              <input name="identifier" type="email" className="input" required />
             </label>
 
             <label className="form-label">Password
@@ -48,24 +67,22 @@ export default function Login() {
                   name="password"
                   type={show ? 'text' : 'password'}
                   className="input"
-                  placeholder=""
                   required
                 />
-                <button type="button" className="input-action" onClick={() => setShow((s) => !s)}>
-                  {show ? 'Hide' : 'Show'}
-                </button>
+                <button type="button" className="input-action" onClick={() => setShow((s) => !s)}>{show ? 'Hide' : 'Show'}</button>
+              </div>
+              <div style={{marginTop:'4px',textAlign:'right',fontSize:'.8rem'}}>
+                <a href="#" style={{color:'#2563eb',textDecoration:'none'}}>Forgot Password?</a>
               </div>
             </label>
 
-            <button className="btn btn-blue auth-primary" type="submit">LOG IN</button>
+            <button className="btn btn-blue auth-primary" type="submit" style={{marginTop:'18px',fontSize:'1.15rem'}}>LOG IN</button>
+            {error && <div className="form-error" style={{color:'#dc2626',marginTop:'10px',fontWeight:600}}>{error}</div>}
           </form>
-
-          <div className="auth-links">
-            <a href="#">Forgot Password?</a>
-            <span>Don't have an account? <Link to="/register">Register here</Link></span>
+          <div style={{marginTop:'18px',textAlign:'center',fontSize:'.98rem',color:'#64748b'}}>
+            Don't have an account? <Link to="/register" style={{color:'#2563eb',fontWeight:600}}>Register here</Link>
           </div>
-
-          <div className="auth-return">
+          <div className="auth-return" style={{marginTop:'10px',textAlign:'left'}}>
             <Link to="/">← Return to Home</Link>
           </div>
         </div>

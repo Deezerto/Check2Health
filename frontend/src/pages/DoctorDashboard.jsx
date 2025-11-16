@@ -1,4 +1,6 @@
 import DashboardNav from '../components/DashboardNav'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const todays = [
   { name:'John Smith', time:'9:00 AM', reason:'Annual Check-up' },
@@ -8,6 +10,17 @@ const todays = [
 ]
 
 export default function DoctorDashboard(){
+  const navigate = useNavigate()
+  useEffect(()=>{
+    try{
+      const raw = sessionStorage.getItem('auth.user')
+      if(!raw){ navigate('/login'); return }
+      const u = JSON.parse(raw)
+      if(u.role && u.role !== 'DOCTOR'){
+        navigate('/dashboard/patient')
+      }
+    }catch{ navigate('/login') }
+  },[navigate])
   const date = new Date()
   const pretty = date.toLocaleDateString(undefined,{ year:'numeric', month:'long', day:'numeric' })
   return (
@@ -15,6 +28,7 @@ export default function DoctorDashboard(){
       <DashboardNav userName="Dr. Elvin Lagamo" active="Dashboard" items={["Dashboard","My Schedule"]}/>
 
       <main className="container dash-main">
+        <div className="role-badge">Logged in as Doctor</div>
         <section className="card list-card">
           <div className="list-header">
             <h2>Today's Appointments</h2>

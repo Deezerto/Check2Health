@@ -95,9 +95,19 @@ body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-s
 .db-links a{color:var(--muted);text-decoration:none;font-weight:600}
 .db-links a.active{color:var(--blue)}
 .db-user{display:flex;align-items:center;gap:.5rem}
+.avatar-btn{display:flex;align-items:center;gap:.5rem;background:transparent;border:none;cursor:pointer;font:inherit;padding:0;box-shadow:none}
+.avatar-btn:focus{outline:2px solid #2563eb44}
+.profile-menu{position:absolute;top:110%;right:0;min-width:160px;background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.13);padding:.5rem 0;z-index:100;display:flex;flex-direction:column;gap:.5rem;animation:fadeIn .18s cubic-bezier(.4,0,.2,1)}
+.profile-menu-item{padding:.7rem 1.1rem;text-align:left;background:none;border:none;font:inherit;cursor:pointer;border-radius:7px;transition:background .13s}
+.profile-menu-item:hover{background:#f1f5f9}
+.profile-view{color:#2563eb;font-weight:600}
+.profile-logout{color:#fff;background:#ef4444;font-weight:600;margin:0 .7rem .5rem .7rem;box-shadow:0 2px 8px #ef444422}
+.profile-logout:hover{background:#dc2626}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .dash-main{padding:1.2rem 0 2rem}
 .dash-title{margin:1rem 0 1rem;font-size:clamp(1.4rem,3vw,2rem)}
 .card{background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.role-badge{display:inline-block;background:#e2e8f0;color:#0f172a;border:1px solid #cbd5e1;border-radius:999px;padding:.25rem .6rem;font-size:.8rem;margin:.25rem 0 .25rem}
 
 /* Patient dashboard */
 .grid.patient-grid{display:grid;grid-template-columns:1fr 300px;gap:1.2rem;align-items:start}
