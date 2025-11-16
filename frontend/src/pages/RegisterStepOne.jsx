@@ -22,17 +22,29 @@ export default function RegisterStepOne() {
 
           <div className="section-header">CREATE AN ACCOUNT</div>
 
-          <form className="form-grid" onSubmit={(e) => { e.preventDefault(); navigate('/register/details') }}>
+          <form className="form-grid" onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const email = form.querySelector('input[name=email]').value;
+            const password = form.querySelector('input[name=password]').value;
+            const confirm = form.querySelector('input[name=confirm]').value;
+            if(password !== confirm){
+              alert('Passwords do not match');
+              return;
+            }
+            sessionStorage.setItem('reg.step1', JSON.stringify({ email, password }));
+            navigate('/register/details');
+          }}>
             <label className="form-label">Email Address
-              <input type="email" className="input" required />
+              <input name="email" type="email" className="input" required />
             </label>
 
             <label className="form-label">Password
-              <input type="password" className="input" required />
+              <input name="password" type="password" className="input" required />
             </label>
 
             <label className="form-label">Re-enter password
-              <input type="password" className="input" required />
+              <input name="confirm" type="password" className="input" required />
             </label>
 
             <button className="btn btn-blue auth-primary" type="submit">NEXT</button>

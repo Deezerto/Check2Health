@@ -5,24 +5,61 @@ Java Spring Boot app for pre-consultation and reservation. This guide shows how 
 ## Prerequisites
 
 - JDK 17 or newer (JAVA_HOME set)
-- MySQL 8.x running locally (or in Docker)
+- MySQL 8.x running locally
+- MySQL Workbench (optional but recommended for database management)
+
+## MySQL Workbench Setup
+
+1. **Install MySQL Server and MySQL Workbench** from https://dev.mysql.com/downloads/
+
+2. **Start MySQL Server** (should auto-start on Windows after installation)
+
+3. **Open MySQL Workbench** and create a connection:
+   - Click **+** next to "MySQL Connections"
+   - Connection Name: `Local Check2Health`
+   - Hostname: `localhost`
+   - Port: `3306`
+   - Username: `root` (or your MySQL user)
+   - Click **Test Connection**, enter your password, then **OK**
+
+4. **Create the database and user:**
+   - Open the connection, then run these SQL commands:
+
+```sql
+CREATE DATABASE IF NOT EXISTS check2health;
+CREATE USER IF NOT EXISTS 'c2h_user'@'%' IDENTIFIED BY 'StrongPass123!';
+GRANT ALL PRIVILEGES ON check2health.* TO 'c2h_user'@'%';
+FLUSH PRIVILEGES;
+```
+
+5. **Update `src/main/resources/application.properties`** with your credentials:
+   - If using `root`: keep `username=root` and set your root password
+   - If using the new user: set `username=c2h_user` and `password=StrongPass123!`
+
+6. **Verify the setup:**
+   - Run the Spring Boot app (see Build and Run below)
+   - In Workbench, refresh Schemas → expand `check2health` → you should see the `patients` table
+   - Query it: `SELECT * FROM patients;`
+
+**Troubleshooting:**
+- Authentication errors: run `ALTER USER 'c2h_user'@'%' IDENTIFIED WITH mysql_native_password BY 'StrongPass123!';`
+- Connection refused: ensure MySQL service is running (Windows Services → MySQL80)
 
 ## Configure the Database
 
-Create a database user (or use an existing one), then add these properties to `src/main/resources/application.properties`:
+The backend is pre-configured for MySQL in `src/main/resources/application.properties`.
+
+**Default settings:**
 
 ```properties
-spring.application.name=check2health
-
-# --- MySQL connection ---
-spring.datasource.url=jdbc:mysql://localhost:3306/check2health?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+spring.datasource.url=jdbc:mysql://localhost:3306/check2health?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 spring.datasource.username=root
 spring.datasource.password=your_password
-
-# --- JPA/Hibernate (dev friendly) ---
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 ```
+
+Update `username` and `password` to match your MySQL credentials (from Workbench setup above).
 
 If MySQL is not installed, you can use Docker:
 

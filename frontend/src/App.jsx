@@ -3,6 +3,9 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import RegisterStepOne from './pages/RegisterStepOne'
 import RegisterStepTwo from './pages/RegisterStepTwo'
+import PatientDashboard from './pages/PatientDashboard'
+import StaffDashboard from './pages/StaffDashboard'
+import DoctorDashboard from './pages/DoctorDashboard'
 
 export default function App() {
   return (
@@ -12,6 +15,9 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<RegisterStepOne />} />
       <Route path="/register/details" element={<RegisterStepTwo />} />
+      <Route path="/dashboard/patient" element={<PatientDashboard />} />
+      <Route path="/dashboard/staff" element={<StaffDashboard />} />
+      <Route path="/dashboard/doctor" element={<DoctorDashboard />} />
       <Route path="*" element={<Home />} />
     </Routes>
   )
