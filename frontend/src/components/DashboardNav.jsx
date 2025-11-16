@@ -1,6 +1,19 @@
 import { Link } from 'react-router-dom'
 
+function getSessionName() {
+  try {
+    const raw = sessionStorage.getItem('auth.user')
+    if (!raw) return null
+    const u = JSON.parse(raw)
+    const fn = [u.firstName, u.lastName].filter(Boolean).join(' ').trim()
+    return fn || u.username || null
+  } catch {
+    return null
+  }
+}
+
 export default function DashboardNav({ userName = 'User', active = 'Dashboard', items = [] }) {
+  const name = userName && userName !== 'User' ? userName : (getSessionName() || 'User')
   return (
     <header className="db-navbar">
       <div className="container db-nav-inner">
@@ -14,7 +27,7 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
         </nav>
         <div className="db-user">
           <span className="avatar">👤</span>
-          <span className="name">{userName}</span>
+          <span className="name">{name}</span>
         </div>
       </div>
     </header>

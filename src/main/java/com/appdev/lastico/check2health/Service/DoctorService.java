@@ -43,6 +43,9 @@ public class DoctorService {
         existing.setMedicalRole(updated.getMedicalRole());
         existing.setPhoneNumber(updated.getPhoneNumber());
         existing.setEmail(updated.getEmail());
+        if (updated.getPassword() != null && !updated.getPassword().isBlank()) {
+            existing.setPassword(updated.getPassword());
+        }
         return existing;
     }
 

@@ -1,4 +1,5 @@
 import DashboardNav from '../components/DashboardNav'
+import { useMemo } from 'react'
 
 const days = ['17 Mon','18 Tue','19 Wed','20 Thu','21 Fri','22 Sat','23 Sun']
 const slots = [
@@ -15,13 +16,27 @@ const slots = [
   { day:6, time:'', doctor:'' },
 ]
 
+function useUserName(){
+  return useMemo(() => {
+    try{
+      const raw = sessionStorage.getItem('auth.user')
+      if(!raw) return {full:'User', first:'User'}
+      const u = JSON.parse(raw)
+      const full = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.username || 'User'
+      const first = (u.firstName || full || 'User').toString()
+      return { full, first }
+    }catch{ return {full:'User', first:'User'} }
+  }, [])
+}
+
 export default function PatientDashboard(){
+  const { full, first } = useUserName()
   return (
     <div className="dash-bg">
-      <DashboardNav userName="Elvin Lagamo" active="Dashboard" items={["Dashboard","My Appointments"]}/>
+      <DashboardNav userName={full} active="Dashboard" items={["Dashboard","My Appointments"]}/>
 
       <main className="container dash-main">
-        <h1 className="dash-title">Welcome back, Elvin!</h1>
+        <h1 className="dash-title">Welcome back, {first}!</h1>
 
         <div className="grid patient-grid">
           <section className="card calendar-card">
