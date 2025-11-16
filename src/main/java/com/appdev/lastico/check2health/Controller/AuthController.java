@@ -47,27 +47,37 @@ public class AuthController {
         }
         String id = request.identifier();
 
-        // Try patient by username or email
-        Optional<Patient> pOpt = patientRepository.findByUsernameIgnoreCase(id);
-        if (pOpt.isEmpty()) {
-            pOpt = patientRepository.findByEmailIgnoreCase(id);
-        }
+        // Try to find a patient by username OR email first.
+        Optional<Patient> pOpt = patientRepository.findByUsernameIgnoreCase(id)
+                .or(() -> patientRepository.findByEmailIgnoreCase(id));
+
         if (pOpt.isPresent()) {
+            // A patient account exists with this identifier. This check must be final.
             Patient patient = pOpt.get();
             if (patient.getPassword() != null && patient.getPassword().equals(request.password())) {
-                return Map.of(
-                        "ok", true,
-                        "role", "PATIENT",
-                        "patientId", patient.getPatientID(),
-                        "firstName", patient.getFirstName(),
-                        "lastName", patient.getLastName(),
-                        "username", patient.getUsername()
-                );
+                // Patient found and password is correct.
+                Map<String, Object> response = new java.util.HashMap<>();
+                response.put("ok", true);
+                response.put("role", "PATIENT");
+                response.put("patientId", patient.getPatientID());
+                response.put("firstName", patient.getFirstName());
+                response.put("lastName", patient.getLastName());
+                response.put("username", patient.getUsername());
+                response.put("email", patient.getEmail() != null ? patient.getEmail() : "");
+                response.put("phoneNumber", patient.getPhoneNumber() != null ? patient.getPhoneNumber() : "");
+                response.put("dateOfBirth", patient.getDateOfBirth() != null ? patient.getDateOfBirth().toString() : "");
+                response.put("street", patient.getStreet() != null ? patient.getStreet() : "");
+                response.put("barangay", patient.getBarangay() != null ? patient.getBarangay() : "");
+                response.put("municipality", patient.getMunicipality() != null ? patient.getMunicipality() : "");
+                response.put("province", patient.getProvince() != null ? patient.getProvince() : "");
+                return response;
+            } else {
+                // Patient found, but password incorrect. Fail fast.
+                throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
             }
-            // If password doesn't match, continue to try doctor (avoid user enumeration)
         }
 
-        // Try doctor by email
+        // No patient found with that identifier, now try to find a doctor by email.
         Optional<Doctor> dOpt = doctorRepository.findByEmailIgnoreCase(id);
         if (dOpt.isPresent()) {
             Doctor doctor = dOpt.get();
@@ -78,31 +88,16 @@ public class AuthController {
                         "doctorId", doctor.getDoctorID(),
                         "firstName", doctor.getFirstName(),
                         "lastName", doctor.getLastName(),
-                        "medicalRole", doctor.getMedicalRole()
+                        "email", doctor.getEmail() != null ? doctor.getEmail() : "",
+                        "medicalRole", doctor.getMedicalRole() != null ? doctor.getMedicalRole() : ""
                 );
+            } else {
+                // Doctor found, but password incorrect. Fail fast.
+                throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
             }
         }
 
+        // If we reach here, no user was found at all with the given identifier.
         throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
-    }
-
-    // Doctor login (email only for demo). Plaintext password comparison.
-    @PostMapping("/login-doctor")
-    public Map<String, Object> loginDoctor(@RequestBody LoginRequest request) {
-        if (request == null || request.identifier() == null || request.password() == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "Missing credentials");
-        }
-        Doctor doctor = doctorRepository.findByEmailIgnoreCase(request.identifier())
-                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid credentials"));
-        if (doctor.getPassword() == null || !doctor.getPassword().equals(request.password())) {
-            throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
-        }
-        return Map.of(
-                "ok", true,
-                "doctorId", doctor.getDoctorID(),
-                "firstName", doctor.getFirstName(),
-                "lastName", doctor.getLastName(),
-                "medicalRole", doctor.getMedicalRole()
-        );
     }
 }

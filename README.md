@@ -146,3 +146,9 @@ src/main/java/com/appdev/lastico/check2health/
 - `mvn` not recognized: always use the wrapper `mvnw.cmd` shown above.
 - MySQL connection errors: verify host/port, user/password, and that the DB allows TCP connections.
 
+## Members:
+
+- Teodoro Jr. Castillo (teodoro.castillojr@cit.edu)
+- Elvin Lagamo Jr. (elvin.lagamo@cit.edu)
+- German Oliver Velasco (germanoliver.velasco@cit.edu)
+

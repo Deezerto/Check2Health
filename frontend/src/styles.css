@@ -161,3 +161,48 @@ body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-s
   .grid.patient-grid{grid-template-columns:1fr}
   .stat-row{grid-template-columns:1fr}
 }
+
+/* Booking flow */
+.booking-container{max-width:960px;margin:0 auto;padding:1rem 0}
+.booking-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;position:relative}
+.booking-progress::before{content:"";position:absolute;top:50%;left:0;right:0;height:3px;background:#e2e8f0;z-index:0}
+.progress-step{text-align:center;position:relative;z-index:1}
+.progress-step::before{content:"";display:inline-block;width:32px;height:32px;border-radius:50%;background:#e2e8f0;border:3px solid #fff;margin-bottom:.5rem}
+.progress-step.active::before{background:#2563eb}
+.progress-label{font-size:.85rem;font-weight:600;color:#64748b}
+.progress-step.active .progress-label{color:#2563eb}
+.booking-card{background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.booking-header{background:#6fafff;color:#fff;padding:1.2rem 1.5rem;border-radius:12px 12px 0 0;position:relative}
+.booking-header h2{margin:0 0 .25rem;font-size:1.5rem}
+.booking-header p{margin:0;opacity:.92;font-size:.95rem}
+.booking-header::after{content:"";position:absolute;right:20px;top:50%;transform:translateY(-50%);width:90px;height:90px;background:url('/assets/logo.png') no-repeat center/contain;opacity:.25;filter:brightness(0) invert(1)}
+.booking-body{padding:1.5rem}
+.week-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.week-nav-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:.5rem 1rem;cursor:pointer;font-weight:600;color:var(--blue)}
+.week-nav-btn:hover{background:#f1f5f9}
+.weekly-view .calendar{margin-top:1rem}
+.pill.clickable{cursor:pointer;transition:all .15s}
+.pill.clickable:hover{background:#bfdbfe;border-color:#93c5fd;transform:translateY(-2px);box-shadow:0 2px 8px rgba(37,99,235,.18)}
+.pill.selected{background:#2563eb;color:#fff;border-color:#1d4ed8}
+.booking-actions{display:flex;gap:1rem;justify-content:space-between;margin-top:1.5rem}
+.booking-actions .btn{flex:1;justify-content:center}
+.survey-form{display:grid;gap:1.2rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.symptom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin-top:.5rem}
+.symptom-btn{padding:.6rem .8rem;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:.9rem;font-weight:500;transition:all .15s}
+.symptom-btn:hover{background:#f8fafc;border-color:#cbd5e1}
+.symptom-btn.selected{background:#dbeafe;border-color:#2563eb;color:#1e40af;font-weight:600}
+.confirm-view{padding:1rem 0}
+.confirm-grid{display:grid;gap:1rem;max-width:520px;margin:0 auto}
+.confirm-row{display:grid;grid-template-columns:120px 1fr;gap:1rem;padding:1rem;background:#f8fafc;border:1px solid var(--border);border-radius:8px}
+.confirm-label{font-weight:700;color:#64748b}
+.confirm-value{font-weight:600}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:1000}
+.time-picker-modal{background:#fff;border-radius:12px;padding:1.5rem;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.time-picker-modal h3{margin:0 0 .75rem}
+.time-picker-modal p{margin:.25rem 0;color:#64748b;font-size:.9rem}
+.time-input{width:100%;padding:.7rem;border:1px solid var(--border);border-radius:8px;font-size:1rem;margin:1rem 0}
+.time-picker-actions{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem}
+.btn-gray{background:#6b7280;color:#fff}
+.btn-gray:hover{background:#4b5563}
+.btn:disabled{opacity:.5;cursor:not-allowed}

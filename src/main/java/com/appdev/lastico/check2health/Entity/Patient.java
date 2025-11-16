@@ -22,6 +22,7 @@ public class Patient {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonProperty("patientId")
     private Long patientID;
 
     @NotBlank

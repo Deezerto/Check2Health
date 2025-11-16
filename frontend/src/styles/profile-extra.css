@@ -1,0 +1,8 @@
+/* Add this to your main CSS if not already present */
+.no-slots {
+  color: #b0b0b0;
+  font-size: 1.1rem;
+  text-align: center;
+  margin: 0.7rem 0;
+  font-weight: 500;
+}

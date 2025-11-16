@@ -76,14 +76,15 @@ export default function PatientDashboard(){
                 <div key={d.label} className="cal-col">
                   <div className="cal-col-head">{d.label}</div>
                   <div className="cal-col-body">
-                    {slots.filter(s=>s.day===i && s.time).map((s,idx)=>(
-                      <div key={idx} className="pill">
-                        <div className="pill-time">{s.time}</div>
-                        <div className="pill-doc">{s.doctor}</div>
-                      </div>
-                    ))}
-                    {slots.filter(s=>s.day===i && !s.time).length>0 && (
+                    {slots.filter(s=>s.day===i).length === 0 ? (
                       <div className="no-slots">No Slots</div>
+                    ) : (
+                      slots.filter(s=>s.day===i && s.time).map((s,idx)=>(
+                        <div key={idx} className="pill">
+                          <div className="pill-time">{s.time}</div>
+                          <div className="pill-doc">{s.doctor}</div>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
@@ -92,7 +93,7 @@ export default function PatientDashboard(){
           </section>
 
           <aside className="side-actions">
-            <a className="btn btn-blue side-btn" href="#">Book a New Appointment</a>
+            <button className="btn btn-blue side-btn" onClick={() => navigate('/book-appointment')}>Book a New Appointment</button>
             <a className="btn btn-green side-btn" href="#">Upcoming Appointment</a>
           </aside>
         </div>
