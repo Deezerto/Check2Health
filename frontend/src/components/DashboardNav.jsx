@@ -68,8 +68,12 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
           <nav className="db-links" aria-label="Dashboard">
             {items.map((label) => {
               let href = '#'
-              if (label === 'Dashboard') href = '/dashboard/doctor'
+              if (label === 'Dashboard') {
+                // Check if it's patient or doctor dashboard based on items
+                href = items.includes('My Appointments') ? '/dashboard/patient' : '/dashboard/doctor'
+              }
               if (label === 'My Schedule') href = '/dashboard/doctor/schedule'
+              if (label === 'My Appointments') href = '/dashboard/patient/appointments'
               return <a key={label} href={href} className={label === active ? 'active' : ''}>{label}</a>
             })}
           </nav>

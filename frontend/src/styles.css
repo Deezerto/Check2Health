@@ -206,3 +206,24 @@ body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-s
 .btn-gray{background:#6b7280;color:#fff}
 .btn-gray:hover{background:#4b5563}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* My Appointments */
+.appointments-container{min-height:calc(100vh - 120px);display:grid;place-items:center;padding:2rem 0}
+.appointments-card{background:var(--surface);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);max-width:720px;width:100%;overflow:hidden}
+.appointments-header{background:var(--blue);color:#fff;margin:0;padding:1.5rem;font-size:1.5rem;font-weight:700}
+.appointments-tabs{display:flex;border-bottom:2px solid var(--border);background:#f8fafc}
+.appointments-tab{flex:1;padding:1rem;background:transparent;border:none;font-size:1rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s}
+.appointments-tab:hover{background:#e2e8f0}
+.appointments-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.appointments-list{padding:1.5rem;max-height:400px;overflow-y:auto}
+.appointments-empty{text-align:center;padding:2rem;color:var(--muted)}
+.appointment-item{display:flex;justify-content:space-between;align-items:center;padding:1.25rem;border-radius:8px;background:#fafafa;margin-bottom:1rem;border:1px solid var(--border)}
+.appointment-item:last-child{margin-bottom:0}
+.appointment-info{flex:1}
+.appointment-doctor{font-weight:700;font-size:1.05rem;margin-bottom:.25rem}
+.appointment-date{color:var(--muted);font-size:.9rem}
+.appointment-badge{display:inline-block;padding:.4rem 1rem;border-radius:20px;font-size:.85rem;font-weight:600;text-align:center;min-width:90px}
+.badge-confirmed{background:#d1fae5;color:#047857}
+.badge-pending{background:#fef3c7;color:#d97706}
+.badge-cancelled{background:#fee2e2;color:#dc2626}
+.appointments-back{width:calc(100% - 3rem);margin:0 1.5rem 1.5rem;display:block}

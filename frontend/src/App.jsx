@@ -9,6 +9,7 @@ import StaffDashboard from './pages/StaffDashboard'
 import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorSchedule from './pages/DoctorSchedule'
 import BookAppointment from './pages/BookAppointment'
+import MyAppointments from './pages/MyAppointments'
 import './components/ProfileModal.css'
 import './styles/profile-extra.css'
 
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/register" element={<RegisterStepOne />} />
       <Route path="/register/details" element={<RegisterStepTwo />} />
       <Route path="/dashboard/patient" element={<PatientDashboard />} />
+      <Route path="/dashboard/patient/appointments" element={<MyAppointments />} />
       <Route path="/dashboard/staff" element={<StaffDashboard />} />
       <Route path="/dashboard/doctor" element={<DoctorDashboard />} />
       <Route path="/dashboard/doctor/schedule" element={<DoctorSchedule />} />

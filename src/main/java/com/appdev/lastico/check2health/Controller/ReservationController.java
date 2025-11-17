@@ -10,6 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -38,10 +41,14 @@ public class ReservationController {
             Patient patient = patientService.findById(patientId);
             Doctor doctor = doctorService.findById(doctorId);
             
+            // Parse ISO 8601 datetime string (e.g., "2024-01-15T14:30:00.000Z")
+            String dateStr = payload.get("reservationDate").toString();
+            LocalDateTime reservationDate = ZonedDateTime.parse(dateStr, DateTimeFormatter.ISO_DATE_TIME).toLocalDateTime();
+            
             Reservation reservation = new Reservation();
             reservation.setPatient(patient);
             reservation.setDoctor(doctor);
-            reservation.setReservationDate(java.time.LocalDateTime.parse(payload.get("reservationDate").toString()));
+            reservation.setReservationDate(reservationDate);
             reservation.setReasonForVisit(payload.get("reasonForVisit").toString());
             reservation.setPreConsultationData(payload.get("preConsultationData").toString());
             reservation.setReservationStatus("PENDING");
@@ -49,6 +56,7 @@ public class ReservationController {
             Reservation saved = reservationService.create(reservation);
             return ResponseEntity.created(URI.create("/api/reservations/" + saved.getReservationID())).body(saved);
         } catch (Exception e) {
+            e.printStackTrace(); // Log the error for debugging
             return ResponseEntity.badRequest().build();
         }
     }
