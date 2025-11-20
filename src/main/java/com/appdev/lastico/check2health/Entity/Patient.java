@@ -62,6 +62,9 @@ public class Patient {
     @Size(max = 120)
     private String province;
 
+    @Size(max = 120)
+    private String region;
+
     @Size(max = 60)
     @Column(unique = true, length = 60)
     private String username;
@@ -175,6 +178,14 @@ public class Patient {
 
     public void setProvince(String province) {
         this.province = province;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
     }
 
     public String getUsername() {

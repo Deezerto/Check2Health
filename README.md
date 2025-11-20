@@ -10,7 +10,9 @@ Java Spring Boot app for pre-consultation and reservation. This guide shows how 
 
 ## MySQL Workbench Setup
 
-1. **Install MySQL Server and MySQL Workbench** from https://dev.mysql.com/downloads/
+1. **Install MySQL Server and MySQL Workbench** from here: 
+    - MySQL Workbench: https://dev.mysql.com/downloads/workbench/
+	- MySQL Server: https://dev.mysql.com/downloads/mysql/ (Community Server - 8.0.44 MSI Installer)
 
 2. **Start MySQL Server** (should auto-start on Windows after installation)
 

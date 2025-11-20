@@ -5,8 +5,8 @@ function Progress({ step }) {
   return (
     <div className="progress-wrap">
       <div className="progress-track" />
-      <div className={`progress-dot ${step >= 1 ? 'active' : ''}`} style={{ left: '14px' }} />
-      <div className={`progress-dot ${step >= 2 ? 'active' : ''}`} style={{ right: '14px' }} />
+      <div className={`progress-dot ${step >= 1 ? 'active' : ''}`} style={{ left: '0px' }} />
+      <div className={`progress-dot ${step >= 2 ? 'active' : ''}`} style={{ right: '0px' }} />
     </div>
   )
 }
@@ -20,9 +20,12 @@ export default function RegisterStepOne() {
       <Progress step={1} />
       <div className="auth-card">
         <div className="auth-card-inner">
+          <div className="auth-return" style={{marginTop:0,textAlign:'left'}}>
+            <Link to="/login">← Return to Log in</Link>
+          </div>
           <img src="/assets/logo.png" alt="Check2Health" className="auth-logo" />
 
-          <div className="section-header">CREATE AN ACCOUNT</div>
+          <h1 className="auth-title" style={{fontWeight:800, fontSize:'2.2rem', marginTop:'10px', marginBottom:'18px'}}>Create an Account</h1>
 
           <form className="form-grid" style={{gap:'18px'}} onSubmit={(e) => {
             e.preventDefault();
@@ -55,11 +58,11 @@ export default function RegisterStepOne() {
               </div>
             </label>
 
-            <button className="btn btn-blue auth-primary" type="submit" style={{marginTop:'10px',fontSize:'1.1rem'}}>NEXT</button>
+            <button className="btn btn-blue auth-primary" type="submit" style={{marginTop:'20px',fontSize:'1.1rem'}}>NEXT</button>
           </form>
 
-          <div className="auth-return">
-            <Link to="/login">← Return to Log in</Link>
+          <div className="auth-return" style={{marginTop:20,textAlign:'left'}}>
+            <Link to="/">← Return to Home</Link>
           </div>
         </div>
       </div>
