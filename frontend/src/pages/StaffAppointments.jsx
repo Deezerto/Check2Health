@@ -2,6 +2,8 @@ import DashboardNav from '../components/DashboardNav'
 import AppointmentActionModal from '../components/AppointmentActionModal'
 import PreConsultationModal from '../components/PreConsultationModal'
 import RescheduleModal from '../components/RescheduleModal'
+import ApproveConfirmationModal from '../components/ApproveConfirmationModal'
+import DenyConfirmationModal from '../components/DenyConfirmationModal'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -53,6 +55,8 @@ export default function StaffAppointments() {
     const [modalOpen, setModalOpen] = useState(false)
     const [preConsultationOpen, setPreConsultationOpen] = useState(false)
     const [rescheduleOpen, setRescheduleOpen] = useState(false)
+    const [approveConfirmationOpen, setApproveConfirmationOpen] = useState(false)
+    const [denyConfirmationOpen, setDenyConfirmationOpen] = useState(false)
     const [previousModal, setPreviousModal] = useState(null)
 
     useEffect(() => {
@@ -89,10 +93,32 @@ export default function StaffAppointments() {
             return
         }
 
+        if (action === 'approve') {
+            if (modalOpen) setPreviousModal('action')
+            else if (preConsultationOpen) setPreviousModal('pre-consultation')
+
+            setModalOpen(false)
+            setPreConsultationOpen(false)
+            setApproveConfirmationOpen(true)
+            return
+        }
+
+        if (action === 'deny') {
+            if (modalOpen) setPreviousModal('action')
+            else if (preConsultationOpen) setPreviousModal('pre-consultation')
+
+            setModalOpen(false)
+            setPreConsultationOpen(false)
+            setDenyConfirmationOpen(true)
+            return
+        }
+
         // Implement actual logic here (e.g., API call)
         setModalOpen(false)
         setPreConsultationOpen(false)
         setRescheduleOpen(false)
+        setApproveConfirmationOpen(false)
+        setDenyConfirmationOpen(false)
         setSelectedAppointment(null)
     }
 
@@ -106,6 +132,46 @@ export default function StaffAppointments() {
             setSelectedAppointment(null)
         }
         setPreviousModal(null)
+    }
+
+    const handleApproveClose = () => {
+        setApproveConfirmationOpen(false)
+        if (previousModal === 'action') {
+            setModalOpen(true)
+        } else if (previousModal === 'pre-consultation') {
+            setPreConsultationOpen(true)
+        } else {
+            setSelectedAppointment(null)
+        }
+        setPreviousModal(null)
+    }
+
+    const handleApproveConfirm = () => {
+        console.log('Appointment Approved')
+        setApproveConfirmationOpen(false)
+        setSelectedAppointment(null)
+        setPreviousModal(null)
+        // Add API call logic here later
+    }
+
+    const handleDenyClose = () => {
+        setDenyConfirmationOpen(false)
+        if (previousModal === 'action') {
+            setModalOpen(true)
+        } else if (previousModal === 'pre-consultation') {
+            setPreConsultationOpen(true)
+        } else {
+            setSelectedAppointment(null)
+        }
+        setPreviousModal(null)
+    }
+
+    const handleDenyConfirm = () => {
+        console.log('Appointment Denied')
+        setDenyConfirmationOpen(false)
+        setSelectedAppointment(null)
+        setPreviousModal(null)
+        // Add API call logic here later
     }
 
     return (
@@ -201,7 +267,7 @@ export default function StaffAppointments() {
                                     <th style={{ padding: '12px 16px', textAlign: 'left', color: '#4a5568', fontWeight: 600 }}>Date & Time</th>
                                     <th style={{ padding: '12px 16px', textAlign: 'left', color: '#4a5568', fontWeight: 600 }}>Status</th>
                                     <th style={{ padding: '12px 16px', textAlign: 'left', color: '#4a5568', fontWeight: 600 }}>Reason</th>
-                                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#4a5568', fontWeight: 600 }}>Actions</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'center', color: '#4a5568', fontWeight: 600 }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -214,7 +280,7 @@ export default function StaffAppointments() {
                                             <StatusBadge status={apt.status} />
                                         </td>
                                         <td style={{ padding: '16px', color: '#000' }}>{apt.reason}</td>
-                                        <td style={{ padding: '16px', textAlign: 'right' }}>
+                                        <td style={{ padding: '16px', textAlign: 'center' }}>
                                             <button
                                                 onClick={() => {
                                                     setSelectedAppointment(apt)
@@ -269,6 +335,19 @@ export default function StaffAppointments() {
                     setSelectedAppointment(null)
                     setPreviousModal(null)
                 }}
+            />
+
+            <ApproveConfirmationModal
+                appointment={selectedAppointment}
+                open={approveConfirmationOpen}
+                onClose={handleApproveClose}
+                onConfirm={handleApproveConfirm}
+            />
+
+            <DenyConfirmationModal
+                open={denyConfirmationOpen}
+                onClose={handleDenyClose}
+                onConfirm={handleDenyConfirm}
             />
         </div>
     )
