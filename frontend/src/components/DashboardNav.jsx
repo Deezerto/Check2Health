@@ -15,7 +15,7 @@ function getSessionName() {
 }
 
 
-export default function DashboardNav({ userName = 'User', active = 'Dashboard', items = [] }) {
+export default function DashboardNav({ userName = 'User', active = 'Dashboard', items = [], role = '' }) {
   const name = userName && userName !== 'User' ? userName : (getSessionName() || 'User')
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -69,22 +69,27 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
             {items.map((label) => {
               let href = '#'
               if (label === 'Dashboard') {
-                // Check if it's patient or doctor dashboard based on items
-                href = items.includes('My Appointments') ? '/dashboard/patient' : '/dashboard/doctor'
+                if (role === 'STAFF') href = '/dashboard/staff'
+                else href = items.includes('My Appointments') ? '/dashboard/patient' : '/dashboard/doctor'
               }
               if (label === 'My Schedule') href = '/dashboard/doctor/schedule'
-              if (label === 'My Appointments') href = '/dashboard/patient/appointments'
+              if (label === 'Schedules' && role === 'STAFF') href = '/dashboard/staff/schedules'
+              if (label === 'Analytics' && role === 'STAFF') href = '/dashboard/staff/analytics'
+              if (label === 'My Appointments') {
+                if (role === 'STAFF') href = '/dashboard/staff/appointments'
+                else href = '/dashboard/patient/appointments'
+              }
               return <a key={label} href={href} className={label === active ? 'active' : ''}>{label}</a>
             })}
           </nav>
-          <div className="db-user" ref={navRef} style={{position:'relative'}}>
-            <button className="avatar-btn" onClick={()=>setOpen(v=>!v)}>
+          <div className="db-user" ref={navRef} style={{ position: 'relative' }}>
+            <button className="avatar-btn" onClick={() => setOpen(v => !v)}>
               <span className="avatar">👤</span>
               <span className="name">{name}</span>
             </button>
             {open && (
               <div className="profile-menu">
-                <button className="profile-menu-item profile-view" onClick={()=>{setProfileOpen(true);setOpen(false)}}>View Profile</button>
+                <button className="profile-menu-item profile-view" onClick={() => { setProfileOpen(true); setOpen(false) }}>View Profile</button>
                 <button className="profile-menu-item profile-logout" onClick={logout}>Logout</button>
               </div>
             )}
@@ -95,13 +100,13 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
         <ProfileModal
           user={getUserProfile()}
           open={profileOpen}
-          onClose={()=>setProfileOpen(false)}
-          onSave={(data)=>{
+          onClose={() => setProfileOpen(false)}
+          onSave={(data) => {
             // Save logic here (e.g., update sessionStorage, call backend)
             const raw = sessionStorage.getItem('auth.user')
-            if(raw){
+            if (raw) {
               const u = JSON.parse(raw)
-              const updated = {...u, ...data}
+              const updated = { ...u, ...data }
               sessionStorage.setItem('auth.user', JSON.stringify(updated))
             }
             setProfileOpen(false)
