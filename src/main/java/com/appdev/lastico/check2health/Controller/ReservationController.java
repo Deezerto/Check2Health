@@ -8,6 +8,7 @@ import com.appdev.lastico.check2health.Service.PatientService;
 import com.appdev.lastico.check2health.Service.DoctorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -54,7 +55,11 @@ public class ReservationController {
             reservation.setReservationStatus("PENDING");
             
             Reservation saved = reservationService.create(reservation);
-            return ResponseEntity.created(URI.create("/api/reservations/" + saved.getReservationID())).body(saved);
+            URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                    .path("/{id}")
+                    .buildAndExpand(saved.getReservationID())
+                    .toUri();
+            return ResponseEntity.created(location).body(saved);
         } catch (Exception e) {
             e.printStackTrace(); // Log the error for debugging
             return ResponseEntity.badRequest().build();
