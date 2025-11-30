@@ -3,21 +3,21 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const pending = [
-  { name:'John Smith', doctor:'Dr. Evelyn Reed', dt:'Nov 17, 2025, 9:00 AM', reason:'I have a fever, this was...' },
-  { name:'Maria Garcia', doctor:'Dr. Teodoro Castillo', dt:'Nov 17, 2025, 9:00 AM', reason:'I have a fever, this was...' },
-  { name:'David Lee', doctor:'Dr. Miguel Santos', dt:'Nov 17, 2025, 9:00 AM', reason:'I have a fever, this was...' },
-  { name:'Elvin Lagamo', doctor:'Dr. Hugh Jackson', dt:'Nov 17, 2025, 9:00 AM', reason:'I have a fever, this was...' },
+  { name: 'John Smith', doctor: 'Dr. Evelyn Reed', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
+  { name: 'Maria Garcia', doctor: 'Dr. Teodoro Castillo', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
+  { name: 'David Lee', doctor: 'Dr. Miguel Santos', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
+  { name: 'Elvin Lagamo', doctor: 'Dr. Hugh Jackson', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
 ]
 
-export default function StaffDashboard(){
+export default function StaffDashboard() {
   const navigate = useNavigate()
-  useEffect(()=>{
+  useEffect(() => {
     const raw = sessionStorage.getItem('auth.user')
-    if(!raw){ navigate('/login') }
-  },[navigate])
+    if (!raw) { navigate('/login') }
+  }, [navigate])
   return (
     <div className="dash-bg">
-      <DashboardNav userName="German Velasco" active="Dashboard" items={["Dashboard","My Appointments","Schedules","Analytics"]}/>
+      <DashboardNav userName="German Velasco" active="Dashboard" items={["Dashboard", "My Appointments", "Schedules", "Analytics"]} role="STAFF" />
 
       <main className="container dash-main">
         <div className="role-badge">Logged in as Staff</div>
@@ -52,7 +52,7 @@ export default function StaffDashboard(){
                 </tr>
               </thead>
               <tbody>
-                {pending.map((p,i)=> (
+                {pending.map((p, i) => (
                   <tr key={i}>
                     <td>{p.name}</td>
                     <td>{p.doctor}</td>
@@ -69,9 +69,9 @@ export default function StaffDashboard(){
         <section className="card chart-card">
           <div className="chart-title">Bookings This Week</div>
           <div className="bar-chart">
-            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=> (
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
               <div key={d} className="bar">
-                <div className="bar-fill" style={{height: (10+ (i%7)*8) + '%'}}></div>
+                <div className="bar-fill" style={{ height: (10 + (i % 7) * 8) + '%' }}></div>
                 <span className="bar-label">{d}</span>
               </div>
             ))}
