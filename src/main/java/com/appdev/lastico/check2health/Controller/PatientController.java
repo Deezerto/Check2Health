@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
 import java.net.URI;
 import java.util.List;
 
@@ -22,7 +24,11 @@ public class PatientController {
     @PostMapping
     public ResponseEntity<Patient> create(@Valid @RequestBody Patient patient) {
         Patient saved = patientService.create(patient);
-        return ResponseEntity.created(URI.create("/api/patients/" + saved.getPatientID())).body(saved);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(saved.getPatientID())
+                .toUri();
+        return ResponseEntity.created(location).body(saved);
     }
 
     @GetMapping
