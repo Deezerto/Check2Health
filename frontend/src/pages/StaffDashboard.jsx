@@ -1,5 +1,9 @@
 import DashboardNav from '../components/DashboardNav'
-import { useEffect } from 'react'
+import PendingAppointmentModal from '../components/PendingAppointmentModal'
+import ApproveConfirmationModal from '../components/ApproveConfirmationModal'
+import RescheduleModal from '../components/RescheduleModal'
+import DenyConfirmationModal from '../components/DenyConfirmationModal'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const pending = [
@@ -11,10 +15,38 @@ const pending = [
 
 export default function StaffDashboard() {
   const navigate = useNavigate()
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
+  const [pendingModalOpen, setPendingModalOpen] = useState(false)
+  const [approveConfirmationOpen, setApproveConfirmationOpen] = useState(false)
+  const [rescheduleOpen, setRescheduleOpen] = useState(false)
+  const [denyConfirmationOpen, setDenyConfirmationOpen] = useState(false)
+
   useEffect(() => {
     const raw = sessionStorage.getItem('auth.user')
     if (!raw) { navigate('/login') }
   }, [navigate])
+
+  const handleAction = (action) => {
+    if (action === 'approve') {
+      setPendingModalOpen(false)
+      setApproveConfirmationOpen(true)
+    } else if (action === 'reschedule') {
+      setPendingModalOpen(false)
+      setRescheduleOpen(true)
+    } else if (action === 'deny') {
+      setPendingModalOpen(false)
+      setDenyConfirmationOpen(true)
+    }
+  }
+
+  const handleCloseAll = () => {
+    setPendingModalOpen(false)
+    setApproveConfirmationOpen(false)
+    setRescheduleOpen(false)
+    setDenyConfirmationOpen(false)
+    setSelectedAppointment(null)
+  }
+
   return (
     <div className="dash-bg">
       <DashboardNav userName="German Velasco" active="Dashboard" items={["Dashboard", "My Appointments", "Schedules", "Analytics"]} role="STAFF" />
@@ -48,7 +80,7 @@ export default function StaffDashboard() {
                   <th>Doctor</th>
                   <th>Date & Time</th>
                   <th>Reason</th>
-                  <th>Actions</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -58,7 +90,28 @@ export default function StaffDashboard() {
                     <td>{p.doctor}</td>
                     <td>{p.dt}</td>
                     <td className="dim">{p.reason}</td>
-                    <td><a className="btn btn-blue btn-xs" href="#">View</a></td>
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedAppointment(p)
+                          setPendingModalOpen(true)
+                        }}
+                        style={{
+                          backgroundColor: 'rgb(37, 99, 235)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        &gt;
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -78,6 +131,42 @@ export default function StaffDashboard() {
           </div>
         </section>
       </main>
+
+      <PendingAppointmentModal
+        appointment={selectedAppointment}
+        open={pendingModalOpen}
+        onClose={() => setPendingModalOpen(false)}
+        onAction={handleAction}
+      />
+
+      <ApproveConfirmationModal
+        appointment={selectedAppointment}
+        open={approveConfirmationOpen}
+        onClose={() => {
+          setApproveConfirmationOpen(false)
+          setPendingModalOpen(true)
+        }}
+        onConfirm={handleCloseAll}
+      />
+
+      <RescheduleModal
+        appointment={selectedAppointment}
+        open={rescheduleOpen}
+        onClose={() => {
+          setRescheduleOpen(false)
+          setPendingModalOpen(true)
+        }}
+        onConfirm={handleCloseAll}
+      />
+
+      <DenyConfirmationModal
+        open={denyConfirmationOpen}
+        onClose={() => {
+          setDenyConfirmationOpen(false)
+          setPendingModalOpen(true)
+        }}
+        onConfirm={handleCloseAll}
+      />
     </div>
   )
 }
