@@ -40,6 +40,8 @@ export default function Login() {
         navigate('/dashboard/doctor')
       } else if (data.role === 'PATIENT') {
         navigate('/dashboard/patient')
+      } else if (data.role === 'STAFF') {
+        navigate('/dashboard/staff')
       } else {
         // Fallback to patient dashboard if role not provided
         navigate('/dashboard/patient')
