@@ -1,0 +1,144 @@
+/* Overall Page Background */
+.app-details-page {
+  background-color: #e0f2fe; /* Light blue background from screenshot */
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Container for main content below navbar */
+.app-details-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 900px; /* Limits width to look like a document */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Back Link */
+.back-link {
+  color: #4c9aff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* Page Title */
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+}
+
+/* Card Styling */
+.info-card {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.card-header {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 0.5rem;
+}
+
+/* Info Rows (Label + Value) */
+.info-row {
+  display: flex;
+  margin-bottom: 0.8rem;
+  align-items: baseline;
+}
+
+.info-row .label {
+  font-weight: 700;
+  min-width: 180px; /* Aligns values vertically */
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.info-row .value {
+  color: #4b5563;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+/* Specific Styles for Pre-Consultation Card */
+.data-section {
+  margin-bottom: 1.2rem;
+}
+
+.block-label {
+  display: block;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+}
+
+.symptoms-list {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.symptoms-list li {
+  margin-bottom: 0.2rem;
+}
+
+.description-text {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+/* Action Button */
+.action-footer {
+  display: flex;
+  justify-content: flex-end; /* Aligns button to right */
+  margin-top: 0.5rem;
+}
+
+.btn-begin {
+  background-color: #5aa9ff; /* Blue button color */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.8rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-begin:hover {
+  background-color: #4090ea;
+}
+
+/* Loading/Error States */
+.loading-screen, .error-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.2rem;
+  color: #666;
+}

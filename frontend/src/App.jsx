@@ -13,6 +13,8 @@ import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorSchedule from './pages/DoctorSchedule'
 import BookAppointment from './pages/BookAppointment'
 import MyAppointments from './pages/MyAppointments'
+import AppointmentDetails from './pages/AppointmentDetails';
+import ConsultationForm from './pages/ConsultationForm';
 import './components/ProfileModal.css'
 import './styles/profile-extra.css'
 
@@ -33,6 +35,8 @@ export default function App() {
       <Route path="/dashboard/doctor" element={<DoctorDashboard />} />
       <Route path="/dashboard/doctor/schedule" element={<DoctorSchedule />} />
       <Route path="/book-appointment" element={<BookAppointment />} />
+      <Route path="/dashboard/doctor/appointment/:id" element={<AppointmentDetails />} />
+      <Route path="/dashboard/doctor/consultation/:id" element={<ConsultationForm />} />
       <Route path="*" element={<Home />} />
     </Routes>
   )
