@@ -34,6 +34,32 @@ export default function PatientDashboard(){
   const { full, first } = useUserName()
   const [days,setDays] = useState(weekInfo())
   const [slots,setSlots] = useState([])
+
+  const monthTitle = useMemo(() => {
+    if (days.length === 0) return "";
+    const firstDay = days[0].date;
+    const lastDay = days[6].date;
+    const fMonth = firstDay.toLocaleString('default', { month: 'long' });
+    const fYear = firstDay.getFullYear();
+    const lMonth = lastDay.toLocaleString('default', { month: 'long' });
+    const lYear = lastDay.getFullYear();
+
+    if (fMonth === lMonth && fYear === lYear) {
+        return `${fMonth} ${fYear}`;
+    } else if (fYear === lYear) {
+        return `${fMonth} - ${lMonth} ${fYear}`;
+    } else {
+        return `${fMonth} ${fYear} - ${lMonth} ${lYear}`;
+    }
+  }, [days]);
+
+  const isToday = (d) => {
+    const now = new Date();
+    return d.date.getDate() === now.getDate() &&
+           d.date.getMonth() === now.getMonth() &&
+           d.date.getFullYear() === now.getFullYear();
+  }
+
   useEffect(()=>{
     try{
       const raw = sessionStorage.getItem('auth.user')
@@ -65,15 +91,14 @@ export default function PatientDashboard(){
       <DashboardNav userName={full} active="Dashboard" items={["Dashboard","My Appointments"]}/>
 
       <main className="container dash-main">
-        <div className="role-badge">Logged in as Patient</div>
         <h1 className="dash-title">Welcome back, {first}!</h1>
 
         <div className="grid patient-grid">
           <section className="card calendar-card">
-            <h2 className="month-title">November 2025</h2>
+            <h2 className="month-title">{monthTitle}</h2>
             <div className="calendar">
               {days.map((d, i) => (
-                <div key={d.label} className="cal-col">
+                <div key={d.label} className={`cal-col ${isToday(d) ? 'today' : ''}`}>
                   <div className="cal-col-head">{d.label}</div>
                   <div className="cal-col-body">
                     {slots.filter(s=>s.day===i).length === 0 ? (
