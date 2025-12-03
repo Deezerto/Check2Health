@@ -11,6 +11,7 @@ export default function StaffSchedules() {
     const [selectedDoctorId, setSelectedDoctorId] = useState('');
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState('');
+    const [staffName, setStaffName] = useState('');
 
     // Initialize state similar to DoctorSchedule
     const [rows, setRows] = useState(DAYS.map(d => ({
@@ -28,6 +29,8 @@ export default function StaffSchedules() {
                 const user = JSON.parse(raw);
                 if (user.role !== 'STAFF') {
                     navigate('/login');
+                } else {
+                    setStaffName(`${user.firstName} ${user.lastName}`);
                 }
             } catch (e) {
                 navigate('/login');
@@ -125,9 +128,9 @@ export default function StaffSchedules() {
     return (
         <div className="dash-bg" style={{ backgroundColor: '#E3F2FD', minHeight: '100vh' }}>
             <DashboardNav
-                userName="German Velasco"
+                userName={staffName}
                 active="Schedules"
-                items={["Dashboard", "My Appointments", "Schedules", "Analytics"]}
+                items={["Dashboard", "Manage Appointments", "Schedules", "Analytics"]}
                 role="STAFF"
             />
 

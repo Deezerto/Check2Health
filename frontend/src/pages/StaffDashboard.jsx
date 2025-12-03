@@ -104,6 +104,49 @@ export default function StaffDashboard() {
     setSelectedAppointment(null)
   }
 
+  const confirmApprove = () => {
+    if (!selectedAppointment) return
+
+    fetch(`/api/reservations/${selectedAppointment.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'CONFIRMED' })
+    })
+    .then(res => {
+      if (res.ok) {
+        setPendingAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id))
+        setStats(prev => ({
+          ...prev,
+          pending: prev.pending - 1,
+          confirmed: prev.confirmed + 1
+        }))
+        handleCloseAll()
+      }
+    })
+    .catch(err => console.error('Failed to approve:', err))
+  }
+
+  const confirmDeny = () => {
+    if (!selectedAppointment) return
+
+    fetch(`/api/reservations/${selectedAppointment.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'CANCELLED' })
+    })
+    .then(res => {
+      if (res.ok) {
+        setPendingAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id))
+        setStats(prev => ({
+          ...prev,
+          pending: prev.pending - 1
+        }))
+        handleCloseAll()
+      }
+    })
+    .catch(err => console.error('Failed to deny:', err))
+  }
+
   // Calculate max for chart scaling
   const maxStat = Math.max(...weeklyStats, 10)
 
@@ -217,7 +260,7 @@ export default function StaffDashboard() {
           setApproveConfirmationOpen(false)
           setPendingModalOpen(true)
         }}
-        onConfirm={handleCloseAll}
+        onConfirm={confirmApprove}
       />
 
       <RescheduleModal
@@ -236,7 +279,7 @@ export default function StaffDashboard() {
           setDenyConfirmationOpen(false)
           setPendingModalOpen(true)
         }}
-        onConfirm={handleCloseAll}
+        onConfirm={confirmDeny}
       />
     </div>
   )

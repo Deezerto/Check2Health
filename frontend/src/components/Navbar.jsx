@@ -8,10 +8,6 @@ export default function Navbar() {
           <img src="/assets/logo.png" alt="Check2Health" className="brand-logo" />
           <span className="brand-text">Check2Health</span>
         </Link>
-        <nav className="nav-links" aria-label="Primary">
-          <a href="#">Contact Us</a>
-          <a href="#">About Us</a>
-        </nav>
         <div className="nav-actions">
           <Link className="btn btn-ghost" to="/login">Log in</Link>
           <Link className="btn btn-blue" to="/register">Register</Link>
