@@ -15,6 +15,8 @@ export default function RegisterStepOne() {
 
   const navigate = useNavigate()
   const [show, setShow] = useState({pw:false, confirm:false})
+  const [error, setError] = useState('')
+
   return (
     <div className="auth-bg">
       <Progress step={1} />
@@ -29,14 +31,34 @@ export default function RegisterStepOne() {
 
           <form className="form-grid" style={{gap:'18px'}} onSubmit={(e) => {
             e.preventDefault();
+            setError('');
             const form = e.currentTarget;
             const email = form.querySelector('input[name=email]').value;
             const password = form.querySelector('input[name=password]').value;
             const confirm = form.querySelector('input[name=confirm]').value;
-            if(password !== confirm){
-              alert('Passwords do not match');
-              return;
+
+            const newErrors = [];
+
+            // Validation Rules
+            if (password.length < 8) {
+              newErrors.push("The password must be at least 8 characters");
             }
+            if (!/(?=.*[a-z])(?=.*[A-Z])/.test(password)) {
+              newErrors.push("The password must have one capital letter and one small letter");
+            }
+            if (/^[0-9]+$/.test(password) || /^[a-zA-Z]+$/.test(password)) {
+               newErrors.push("The password can't be entirely numbers or letters");
+            }
+
+            if(password !== confirm){
+              newErrors.push('Passwords do not match');
+            }
+
+            if (newErrors.length > 0) {
+                setError(newErrors);
+                return;
+            }
+
             sessionStorage.setItem('reg.step1', JSON.stringify({ email, password }));
             navigate('/register/details');
           }}>
@@ -57,6 +79,12 @@ export default function RegisterStepOne() {
                 <button type="button" className="input-action" onClick={()=>setShow(s=>({...s,confirm:!s.confirm}))}>{show.confirm ? 'Hide' : 'Show'}</button>
               </div>
             </label>
+
+            {error && (
+              <div style={{color:'red', fontSize:'0.9rem', textAlign:'left', display:'flex', flexDirection:'column', gap:'6px'}}>
+                {Array.isArray(error) ? error.map((e, i) => <div key={i}>{e}</div>) : error}
+              </div>
+            )}
 
             <button className="btn btn-blue auth-primary" type="submit" style={{marginTop:'20px',fontSize:'1.1rem'}}>NEXT</button>
           </form>

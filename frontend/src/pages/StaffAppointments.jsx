@@ -7,12 +7,7 @@ import DenyConfirmationModal from '../components/DenyConfirmationModal'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const appointments = [
-    { name: 'John Smith', doctor: 'Dr. Evelyn Reed', dt: 'Nov 17, 2025, 9:00 AM', status: 'Confirmed', reason: 'Annual Check-up' },
-    { name: 'Maria Garcia', doctor: 'Dr. Teodoro Castillo', dt: 'Nov 17, 2025, 9:00 AM', status: 'Completed', reason: 'Stomach ache' },
-    { name: 'David Lee', doctor: 'Dr. Miguel Santos', dt: 'Nov 17, 2025, 9:00 AM', status: 'Pending', reason: 'Annual Check-up' },
-    { name: 'Elvin Lagamo', doctor: 'Dr. Hugh Jackson', dt: 'Nov 17, 2025, 9:00 AM', status: 'Cancelled', reason: 'Stomach ache' },
-]
+
 
 function StatusBadge({ status }) {
     let color = '#6c757d' // default gray
@@ -58,6 +53,9 @@ export default function StaffAppointments() {
     const [approveConfirmationOpen, setApproveConfirmationOpen] = useState(false)
     const [denyConfirmationOpen, setDenyConfirmationOpen] = useState(false)
     const [previousModal, setPreviousModal] = useState(null)
+    
+    const [appointments, setAppointments] = useState([])
+    const [staffName, setStaffName] = useState('')
 
     useEffect(() => {
         const raw = sessionStorage.getItem('auth.user')
@@ -66,12 +64,32 @@ export default function StaffAppointments() {
             try {
                 const user = JSON.parse(raw);
                 if (user.role !== 'STAFF') {
-                    navigate('/login'); // Or some other appropriate redirect
+                    navigate('/login');
+                } else {
+                    setStaffName(`${user.firstName} ${user.lastName}`)
                 }
             } catch (e) {
                 navigate('/login');
             }
         }
+        
+        fetch('/api/reservations')
+            .then(res => res.json())
+            .then(data => {
+                const formatted = data.map(r => ({
+                    id: r.reservationID,
+                    name: `${r.patient.firstName} ${r.patient.lastName}`,
+                    doctor: `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`,
+                    dt: new Date(r.reservationDate).toLocaleString('en-US', { 
+                        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true 
+                    }),
+                    status: r.reservationStatus.charAt(0).toUpperCase() + r.reservationStatus.slice(1).toLowerCase(),
+                    reason: r.reasonForVisit,
+                    raw: r
+                }))
+                setAppointments(formatted)
+            })
+            .catch(err => console.error('Failed to fetch appointments:', err))
     }, [navigate])
 
     const handleAction = (action) => {
@@ -177,9 +195,9 @@ export default function StaffAppointments() {
     return (
         <div className="dash-bg" style={{ backgroundColor: '#E9F3FF', minHeight: '100vh' }}>
             <DashboardNav
-                userName="German Velasco"
-                active="My Appointments"
-                items={["Dashboard", "My Appointments", "Schedules", "Analytics"]}
+                userName={staffName}
+                active="Manage Appointments"
+                items={["Dashboard", "Manage Appointments", "Schedules", "Analytics"]}
                 role="STAFF"
             />
 
@@ -271,21 +289,26 @@ export default function StaffAppointments() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {appointments.map((apt, i) => (
-                                    <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                        <td style={{ padding: '16px', color: '#000', fontWeight: 500 }}>{apt.name}</td>
-                                        <td style={{ padding: '16px', color: '#000' }}>{apt.doctor}</td>
-                                        <td style={{ padding: '16px', color: '#333' }}>{apt.dt}</td>
-                                        <td style={{ padding: '16px' }}>
-                                            <StatusBadge status={apt.status} />
-                                        </td>
-                                        <td style={{ padding: '16px', color: '#000' }}>{apt.reason}</td>
-                                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedAppointment(apt)
-                                                    setModalOpen(true)
-                                                }}
+                                {appointments.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No appointments found.</td>
+                                    </tr>
+                                ) : (
+                                    appointments.map((apt, i) => (
+                                        <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                            <td style={{ padding: '16px', color: '#000', fontWeight: 500 }}>{apt.name}</td>
+                                            <td style={{ padding: '16px', color: '#000' }}>{apt.doctor}</td>
+                                            <td style={{ padding: '16px', color: '#333' }}>{apt.dt}</td>
+                                            <td style={{ padding: '16px' }}>
+                                                <StatusBadge status={apt.status} />
+                                            </td>
+                                            <td style={{ padding: '16px', color: '#000' }}>{apt.reason}</td>
+                                            <td style={{ padding: '16px', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedAppointment(apt)
+                                                        setModalOpen(true)
+                                                    }}
                                                 style={{
                                                     backgroundColor: '#2563eb',
                                                     color: 'white',
@@ -303,7 +326,7 @@ export default function StaffAppointments() {
                                             </button>
                                         </td>
                                     </tr>
-                                ))}
+                                )))}
                             </tbody>
                         </table>
                     </div>

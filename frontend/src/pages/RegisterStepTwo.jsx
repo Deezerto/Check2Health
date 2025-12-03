@@ -30,6 +30,7 @@ export default function RegisterStepTwo() {
   })()
   
   const [birthDate, setBirthDate] = useState('')
+  const [displayDate, setDisplayDate] = useState('')
   const [age, setAge] = useState('')
   const [regions, setRegions] = useState([])
   const [provinces, setProvinces] = useState([])
@@ -40,6 +41,9 @@ export default function RegisterStepTwo() {
   const [selectedMunicipality, setSelectedMunicipality] = useState('')
   const [selectedBarangay, setSelectedBarangay] = useState('')
   const [loading, setLoading] = useState(false)
+  const [gender, setGender] = useState('Male')
+  const [otherGender, setOtherGender] = useState('')
+  const [errors, setErrors] = useState({})
 
   // Fetch regions on mount
   useEffect(() => {
@@ -115,14 +119,29 @@ export default function RegisterStepTwo() {
       })
   }, [selectedMunicipality])
 
-  const handleBirthDateChange = (e) => {
-    const date = e.target.value
-    setBirthDate(date)
-    setAge(calculateAge(date))
+  const handleDateInput = (e) => {
+    let val = e.target.value;
+    // Allow only numbers and slashes
+    if (/[^0-9/]/.test(val)) return;
+    
+    setDisplayDate(val);
+
+    // Check format mm/dd/yyyy
+    const match = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+        const [_, m, d, y] = match;
+        const iso = `${y}-${m}-${d}`;
+        setBirthDate(iso);
+        setAge(calculateAge(iso));
+    } else {
+        setBirthDate('');
+        setAge('');
+    }
   }
 
   const submit = async (e) => {
     e.preventDefault()
+    setErrors({})
     if(!step1.email || !step1.password){
       alert('Please complete Step 1 first.');
       navigate('/register');
@@ -130,6 +149,39 @@ export default function RegisterStepTwo() {
     }
     const form = e.currentTarget
     
+    const newErrors = {}
+    
+    // Validation
+    if (!form.username.value) newErrors.username = "Username is required"
+    if (!form.firstName.value) newErrors.firstName = "First Name is required"
+    if (!form.lastName.value) newErrors.lastName = "Last Name is required"
+    
+    if (!displayDate) {
+        newErrors.dateOfBirth = "Date of Birth is required"
+    } else if (!birthDate) {
+        newErrors.dateOfBirth = "Invalid format (mm/dd/yyyy)"
+    } else {
+        const dob = new Date(birthDate)
+        const today = new Date()
+        if (dob > today) {
+            newErrors.dateOfBirth = "Date cannot be in the future"
+        }
+    }
+
+    if (!selectedRegion) newErrors.region = "Region is required"
+    if (!selectedProvince) newErrors.province = "Province is required"
+    if (!selectedMunicipality) newErrors.municipality = "Municipality is required"
+    if (!selectedBarangay) newErrors.barangay = "Barangay is required"
+    
+    if (gender === 'Other' && !otherGender) {
+        newErrors.gender = "Please specify gender"
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors)
+        return
+    }
+
     // Get the selected names (not codes)
     const regionName = regions.find(r => r.code === selectedRegion)?.name || ''
     const provinceName = provinces.find(p => p.code === selectedProvince)?.name || ''
@@ -149,7 +201,7 @@ export default function RegisterStepTwo() {
       municipality: municipalityName,
       province: provinceName,
       region: regionName,
-      gender: form.gender.value,
+      gender: gender === 'Other' ? otherGender : gender,
       phoneNumber: form.phone.value
     }
     try {
@@ -176,28 +228,34 @@ export default function RegisterStepTwo() {
           <h1 className="auth-title" style={{fontWeight:800, fontSize:'2.2rem', marginTop:'10px', marginBottom:'18px'}}>Fill Up Personal Information</h1>
 
           {/* Scrollable content aligned with Patient entity */}
-          <form className="form-grid scrollable" onSubmit={submit}>
+          <form className="form-grid scrollable" onSubmit={submit} noValidate>
             <label className="form-label">Username
-              <input name="username" type="text" className="input" required />
+              <input name="username" type="text" className="input" />
+              {errors.username && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.username}</span>}
             </label>
 
             <label className="form-label">First Name
-              <input name="firstName" type="text" className="input" required />
+              <input name="firstName" type="text" className="input" />
+              {errors.firstName && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.firstName}</span>}
             </label>
 
             <label className="form-label">Last Name
-              <input name="lastName" type="text" className="input" required />
+              <input name="lastName" type="text" className="input" />
+              {errors.lastName && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.lastName}</span>}
             </label>
 
             <div className="row">
               <label className="form-label">Date of Birth
                 <input 
                   name="dateOfBirth" 
-                  type="date" 
+                  type="text" 
                   className="input" 
-                  value={birthDate}
-                  onChange={handleBirthDateChange}
+                  placeholder="mm/dd/yyyy"
+                  value={displayDate}
+                  onChange={handleDateInput}
+                  maxLength={10}
                 />
+                {errors.dateOfBirth && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.dateOfBirth}</span>}
               </label>
               <label className="form-label">Age
                 <input 
@@ -217,13 +275,13 @@ export default function RegisterStepTwo() {
                 className="input" 
                 value={selectedRegion} 
                 onChange={(e) => setSelectedRegion(e.target.value)}
-                required
               >
                 <option value="">-- Select Region --</option>
                 {regions.map(r => (
                   <option key={r.code} value={r.code}>{r.name}</option>
                 ))}
               </select>
+              {errors.region && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.region}</span>}
             </label>
 
             <label className="form-label">Province
@@ -232,13 +290,13 @@ export default function RegisterStepTwo() {
                 value={selectedProvince} 
                 onChange={(e) => setSelectedProvince(e.target.value)}
                 disabled={!selectedRegion || loading}
-                required
               >
                 <option value="">-- Select Province --</option>
                 {provinces.map(p => (
                   <option key={p.code} value={p.code}>{p.name}</option>
                 ))}
               </select>
+              {errors.province && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.province}</span>}
             </label>
 
             <label className="form-label">Municipality
@@ -247,13 +305,13 @@ export default function RegisterStepTwo() {
                 value={selectedMunicipality} 
                 onChange={(e) => setSelectedMunicipality(e.target.value)}
                 disabled={!selectedProvince || loading}
-                required
               >
                 <option value="">-- Select Municipality --</option>
                 {municipalities.map(m => (
                   <option key={m.code} value={m.code}>{m.name}</option>
                 ))}
               </select>
+              {errors.municipality && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.municipality}</span>}
             </label>
 
             <label className="form-label">Barangay
@@ -262,13 +320,13 @@ export default function RegisterStepTwo() {
                 value={selectedBarangay} 
                 onChange={(e) => setSelectedBarangay(e.target.value)}
                 disabled={!selectedMunicipality || loading}
-                required
               >
                 <option value="">-- Select Barangay --</option>
                 {barangays.map(b => (
                   <option key={b.code} value={b.code}>{b.name}</option>
                 ))}
               </select>
+              {errors.barangay && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.barangay}</span>}
             </label>
 
             <label className="form-label">Street
@@ -276,10 +334,30 @@ export default function RegisterStepTwo() {
             </label>
 
             <div className="row">
-              <fieldset className="form-label"><legend>Gender</legend>
-                <label className="radio"><input type="radio" name="gender" value="Male" defaultChecked /> Male</label>
-                <label className="radio"><input type="radio" name="gender" value="Female" /> Female</label>
-              </fieldset>
+              <div className="form-label">Gender
+                <div style={{display:'flex', gap:'15px', marginTop:'8px', alignItems:'center'}}>
+                  <label className="radio" style={{display:'flex', alignItems:'center', gap:'5px', cursor:'pointer'}}>
+                    <input type="radio" name="gender" value="Male" checked={gender === 'Male'} onChange={(e)=>setGender(e.target.value)} /> Male
+                  </label>
+                  <label className="radio" style={{display:'flex', alignItems:'center', gap:'5px', cursor:'pointer'}}>
+                    <input type="radio" name="gender" value="Female" checked={gender === 'Female'} onChange={(e)=>setGender(e.target.value)} /> Female
+                  </label>
+                  <label className="radio" style={{display:'flex', alignItems:'center', gap:'5px', cursor:'pointer'}}>
+                    <input type="radio" name="gender" value="Other" checked={gender === 'Other'} onChange={(e)=>setGender(e.target.value)} /> Other
+                  </label>
+                </div>
+                {gender === 'Other' && (
+                  <input 
+                    type="text" 
+                    className="input" 
+                    placeholder="Please specify gender" 
+                    style={{marginTop:'8px'}}
+                    value={otherGender}
+                    onChange={(e) => setOtherGender(e.target.value)}
+                  />
+                )}
+                {errors.gender && <span style={{color:'red', fontSize:'0.8rem'}}>{errors.gender}</span>}
+              </div>
               <label className="form-label">Phone Number
                 <input name="phone" type="tel" className="input" placeholder="+63 9XX XXX XXXX" />
               </label>
