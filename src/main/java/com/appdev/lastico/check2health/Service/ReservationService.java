@@ -1,18 +1,54 @@
 package com.appdev.lastico.check2health.Service;
 
+import com.appdev.lastico.check2health.Entity.Doctor;
+import com.appdev.lastico.check2health.Entity.Patient;
 import com.appdev.lastico.check2health.Entity.Reservation;
 import com.appdev.lastico.check2health.Repository.ReservationRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
+    private final PatientService patientService;
+    private final DoctorService doctorService;
 
-    public ReservationService(ReservationRepository reservationRepository) {
+    public ReservationService(ReservationRepository reservationRepository,
+            PatientService patientService,
+            DoctorService doctorService) {
         this.reservationRepository = reservationRepository;
+        this.patientService = patientService;
+        this.doctorService = doctorService;
+    }
+
+    @Transactional
+    public Reservation createFromPayload(Map<String, Object> payload) {
+        Long patientId = Long.valueOf(payload.get("patientId").toString());
+        Long doctorId = Long.valueOf(payload.get("doctorId").toString());
+
+        Patient patient = patientService.findById(patientId);
+        Doctor doctor = doctorService.findById(doctorId);
+
+        // Parse ISO 8601 datetime string (e.g., "2024-01-15T14:30:00.000Z")
+        String dateStr = payload.get("reservationDate").toString();
+        LocalDateTime reservationDate = ZonedDateTime.parse(dateStr, DateTimeFormatter.ISO_DATE_TIME).toLocalDateTime();
+
+        Reservation reservation = new Reservation();
+        reservation.setPatient(patient);
+        reservation.setDoctor(doctor);
+        reservation.setReservationDate(reservationDate);
+        reservation.setReasonForVisit(payload.get("reasonForVisit").toString());
+        reservation.setPreConsultationData(payload.get("preConsultationData").toString());
+        reservation.setReservationStatus("PENDING");
+
+        return reservationRepository.save(reservation);
     }
 
     public Reservation create(Reservation reservation) {

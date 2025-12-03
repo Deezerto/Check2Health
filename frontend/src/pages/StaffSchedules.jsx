@@ -2,8 +2,23 @@ import React, { useState, useEffect } from 'react';
 import DashboardNav from '../components/DashboardNav';
 import { useNavigate } from 'react-router-dom';
 
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 export default function StaffSchedules() {
     const navigate = useNavigate();
+
+    const [doctors, setDoctors] = useState([]);
+    const [selectedDoctorId, setSelectedDoctorId] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [msg, setMsg] = useState('');
+
+    // Initialize state similar to DoctorSchedule
+    const [rows, setRows] = useState(DAYS.map(d => ({
+        dayOfWeek: d,
+        active: d !== 'Saturday' && d !== 'Sunday',
+        startTime: '09:00',
+        endTime: '17:00'
+    })));
 
     useEffect(() => {
         const raw = sessionStorage.getItem('auth.user');
@@ -18,22 +33,94 @@ export default function StaffSchedules() {
                 navigate('/login');
             }
         }
+        fetchDoctors();
     }, [navigate]);
 
-    const days = [
-        { name: 'Monday', type: 'weekday' },
-        { name: 'Tuesday', type: 'weekday' },
-        { name: 'Wednesday', type: 'weekday' },
-        { name: 'Thursday', type: 'weekday' },
-        { name: 'Friday', type: 'weekday' },
-        { name: 'Saturday', type: 'weekend' },
-        { name: 'Sunday', type: 'weekend' },
-    ];
+    const fetchDoctors = async () => {
+        try {
+            const res = await fetch('/api/doctors');
+            if (res.ok) {
+                const data = await res.json();
+                setDoctors(data);
+                if (data.length > 0) {
+                    setSelectedDoctorId(data[0].doctorId); // Default to first doctor
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch doctors", err);
+        }
+    };
 
-    const timeOptions = [
-        "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-        "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM"
-    ];
+    // Fetch schedule when selected doctor changes
+    useEffect(() => {
+        if (!selectedDoctorId) return;
+        fetchSchedule(selectedDoctorId);
+    }, [selectedDoctorId]);
+
+    const fetchSchedule = async (doctorId) => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/schedules/doctor/${doctorId}`);
+            if (res.ok) {
+                const data = await res.json();
+                // Merge with default rows
+                setRows(prev => prev.map(r => {
+                    const found = data.find(d => d.dayOfWeek.toUpperCase() === r.dayOfWeek.toUpperCase());
+                    if (found) {
+                        return {
+                            ...r,
+                            active: found.active,
+                            startTime: found.startTime ? found.startTime.substring(0, 5) : '',
+                            endTime: found.endTime ? found.endTime.substring(0, 5) : ''
+                        };
+                    }
+                    return { ...r, active: false, startTime: '', endTime: '' }; // Reset if not found
+                }));
+            }
+        } catch (err) {
+            console.error("Failed to fetch schedule", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const update = (idx, patch) => {
+        setRows(prev => prev.map((row, i) => i === idx ? { ...row, ...patch } : row));
+    };
+
+    const save = async () => {
+        if (!selectedDoctorId) return;
+        setLoading(true);
+        setMsg('');
+        try {
+            const payload = rows.map(r => ({
+                dayOfWeek: r.dayOfWeek,
+                isActive: r.active,
+                startTime: r.startTime,
+                endTime: r.endTime
+            }));
+
+            const res = await fetch(`/api/schedules/doctor/${selectedDoctorId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                setMsg('Schedule saved successfully!');
+                setTimeout(() => setMsg(''), 3000);
+            } else {
+                setMsg('Failed to save schedule.');
+            }
+        } catch (err) {
+            setMsg('Network error.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const selectedDoctorName = doctors.find(d => d.doctorId === Number(selectedDoctorId))
+        ? `${doctors.find(d => d.doctorId === Number(selectedDoctorId)).firstName} ${doctors.find(d => d.doctorId === Number(selectedDoctorId)).lastName}`
+        : 'Selected Doctor';
 
     return (
         <div className="dash-bg" style={{ backgroundColor: '#E3F2FD', minHeight: '100vh' }}>
@@ -78,19 +165,26 @@ export default function StaffSchedules() {
                                 Select a Doctor to manage their schedule:
                             </label>
                             <div className="select-wrapper" style={{ position: 'relative', maxWidth: '300px' }}>
-                                <select className="input" style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #e2e8f0',
-                                    appearance: 'none',
-                                    backgroundColor: '#fff',
-                                    fontSize: '16px',
-                                    color: '#000'
-                                }} defaultValue="Dr. Elvin Lagamo">
-                                    <option>Dr. Elvin Lagamo</option>
-                                    <option>Dr. Evelyn Reed</option>
-                                    <option>Dr. Teodoro Castillo</option>
+                                <select
+                                    className="input"
+                                    value={selectedDoctorId}
+                                    onChange={(e) => setSelectedDoctorId(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #e2e8f0',
+                                        appearance: 'none',
+                                        backgroundColor: '#fff',
+                                        fontSize: '16px',
+                                        color: '#000'
+                                    }}
+                                >
+                                    {doctors.map(doc => (
+                                        <option key={doc.doctorId} value={doc.doctorId}>
+                                            Dr. {doc.firstName} {doc.lastName}
+                                        </option>
+                                    ))}
                                 </select>
                                 <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>▼</span>
                             </div>
@@ -98,87 +192,78 @@ export default function StaffSchedules() {
                     </div>
 
                     {/* Weekly Schedule Grid */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '40px' }}>
-                        {days.map((day, index) => (
-                            <div key={index} style={{
+                    <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '40px' }}>
+                        {rows.map((r, idx) => (
+                            <div key={r.dayOfWeek} style={{
                                 display: 'grid',
-                                gridTemplateColumns: '40px 120px 1fr 1fr',
+                                gridTemplateColumns: '160px 1fr 1fr',
+                                gap: '10px',
                                 alignItems: 'center',
-                                gap: '20px'
+                                padding: '10px 0',
+                                borderBottom: '1px solid #e2e8f0'
                             }}>
-                                {/* Day Indicator (Checkbox) */}
-                                <div style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
+                                <label style={{ fontWeight: 800, display: 'flex', alignItems: 'center', color: '#000' }}>
                                     <input
                                         type="checkbox"
-                                        defaultChecked={day.type === 'weekday'}
-                                        style={{
-                                            width: '20px',
-                                            height: '20px',
-                                            cursor: 'pointer',
-                                            accentColor: '#2563eb'
-                                        }}
+                                        checked={r.active}
+                                        onChange={e => update(idx, { active: e.target.checked })}
+                                        style={{ marginRight: '8px', width: '20px', height: '20px', accentColor: '#2563eb', cursor: 'pointer' }}
                                     />
-                                </div>
-
-                                {/* Day Label */}
-                                <div style={{ fontWeight: 'bold', color: '#000', fontSize: '16px' }}>
-                                    {day.name}
-                                </div>
-
-                                {/* Start Time */}
+                                    {r.dayOfWeek}
+                                </label>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '12px', color: '#6c757d', marginBottom: '4px' }}>Start Time</label>
-                                    <div className="select-wrapper" style={{ position: 'relative' }}>
-                                        <select className="input" style={{
-                                            width: '100%',
-                                            padding: '10px',
-                                            paddingRight: '35px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #e2e8f0',
-                                            appearance: 'none',
-                                            backgroundColor: '#fff',
-                                            fontSize: '14px'
-                                        }} defaultValue="08:00 AM">
-                                            {timeOptions.map(t => <option key={t}>{t}</option>)}
-                                        </select>
-                                        <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#9ca3af" viewBox="0 0 16 16">
-                                                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
-                                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z" />
+                                    <label className="form-label" style={{ display: 'inline-grid', gridTemplateColumns: '110px 140px', gap: '8px', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '14px', color: '#6c757d' }}>Start Time :</span>
+                                        <div className="custom-time-wrapper">
+                                            <input
+                                                type="time"
+                                                className="input"
+                                                value={r.startTime}
+                                                onChange={e => update(idx, { startTime: e.target.value })}
+                                                disabled={!r.active}
+                                                onClick={(e) => r.active && e.target.showPicker && e.target.showPicker()}
+                                                style={{
+                                                    padding: '8px',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #e2e8f0',
+                                                    backgroundColor: '#fff',
+                                                    color: '#000',
+                                                    opacity: r.active ? 1 : 0.5,
+                                                    cursor: r.active ? 'pointer' : 'default'
+                                                }}
+                                            />
+                                            <svg className="custom-time-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ opacity: r.active ? 1 : 0.5 }}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                        </span>
-                                    </div>
+                                        </div>
+                                    </label>
                                 </div>
-
-                                {/* End Time */}
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '12px', color: '#6c757d', marginBottom: '4px' }}>End Time</label>
-                                    <div className="select-wrapper" style={{ position: 'relative' }}>
-                                        <select className="input" style={{
-                                            width: '100%',
-                                            padding: '10px',
-                                            paddingRight: '35px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #e2e8f0',
-                                            appearance: 'none',
-                                            backgroundColor: '#fff',
-                                            fontSize: '14px'
-                                        }} defaultValue="05:00 PM">
-                                            {timeOptions.map(t => <option key={t}>{t}</option>)}
-                                        </select>
-                                        <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#9ca3af" viewBox="0 0 16 16">
-                                                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
-                                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z" />
+                                    <label className="form-label" style={{ display: 'inline-grid', gridTemplateColumns: '100px 140px', gap: '8px', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '14px', color: '#6c757d' }}>End Time :</span>
+                                        <div className="custom-time-wrapper">
+                                            <input
+                                                type="time"
+                                                className="input"
+                                                value={r.endTime}
+                                                onChange={e => update(idx, { endTime: e.target.value })}
+                                                disabled={!r.active}
+                                                onClick={(e) => r.active && e.target.showPicker && e.target.showPicker()}
+                                                style={{
+                                                    padding: '8px',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #e2e8f0',
+                                                    backgroundColor: '#fff',
+                                                    color: '#000',
+                                                    opacity: r.active ? 1 : 0.5,
+                                                    cursor: r.active ? 'pointer' : 'default'
+                                                }}
+                                            />
+                                            <svg className="custom-time-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ opacity: r.active ? 1 : 0.5 }}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                        </span>
-                                    </div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
                         ))}
@@ -186,19 +271,23 @@ export default function StaffSchedules() {
 
                     {/* Action Footer */}
                     <div>
-                        <button style={{
-                            backgroundColor: '#6495ED',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '14px 24px',
-                            fontSize: '16px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            width: '100%'
-                        }}>
-                            Save Schedule for Dr. Elvin Lagamo
+                        <button
+                            onClick={save}
+                            disabled={loading || !selectedDoctorId}
+                            style={{
+                                backgroundColor: loading ? '#9ca3af' : '#6495ED',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '14px 24px',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                width: '100%'
+                            }}>
+                            {loading ? 'Saving...' : `Save Schedule for ${selectedDoctorName}`}
                         </button>
+                        {msg && <div style={{ marginTop: '15px', textAlign: 'center', color: msg.includes('Failed') ? 'red' : 'green', fontWeight: 'bold' }}>{msg}</div>}
                     </div>
 
                 </div>
