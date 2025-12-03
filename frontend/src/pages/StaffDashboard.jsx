@@ -6,13 +6,6 @@ import DenyConfirmationModal from '../components/DenyConfirmationModal'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const pending = [
-  { name: 'John Smith', doctor: 'Dr. Evelyn Reed', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
-  { name: 'Maria Garcia', doctor: 'Dr. Teodoro Castillo', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
-  { name: 'David Lee', doctor: 'Dr. Miguel Santos', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
-  { name: 'Elvin Lagamo', doctor: 'Dr. Hugh Jackson', dt: 'Nov 17, 2025, 9:00 AM', reason: 'I have a fever, this was...' },
-]
-
 export default function StaffDashboard() {
   const navigate = useNavigate()
   const [selectedAppointment, setSelectedAppointment] = useState(null)
@@ -20,11 +13,75 @@ export default function StaffDashboard() {
   const [approveConfirmationOpen, setApproveConfirmationOpen] = useState(false)
   const [rescheduleOpen, setRescheduleOpen] = useState(false)
   const [denyConfirmationOpen, setDenyConfirmationOpen] = useState(false)
+  
+  const [pendingAppointments, setPendingAppointments] = useState([])
+  const [stats, setStats] = useState({ pending: 0, confirmed: 0, patients: 0 })
+  const [staffName, setStaffName] = useState('')
+  const [weeklyStats, setWeeklyStats] = useState([0, 0, 0, 0, 0, 0, 0])
 
   useEffect(() => {
     const raw = sessionStorage.getItem('auth.user')
-    if (!raw) { navigate('/login') }
+    if (raw) {
+      const user = JSON.parse(raw)
+      setStaffName(`${user.firstName} ${user.lastName}`)
+    } else {
+      navigate('/login')
+    }
   }, [navigate])
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/reservations/status/PENDING').then(res => res.json()),
+      fetch('/api/reservations/status/CONFIRMED').then(res => res.json()),
+      fetch('/api/patients').then(res => res.json())
+    ]).then(([pendingData, confirmedData, patientsData]) => {
+      // Update Stats
+      setStats({
+        pending: pendingData.length,
+        confirmed: confirmedData.length,
+        patients: patientsData.length
+      })
+
+      // Update Table (Pending only)
+      const formatted = pendingData.map(r => ({
+        id: r.reservationID,
+        name: `${r.patient.firstName} ${r.patient.lastName}`,
+        doctor: `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`,
+        dt: new Date(r.reservationDate).toLocaleString('en-US', { 
+          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true 
+        }),
+        reason: r.reasonForVisit,
+        raw: r 
+      }))
+      setPendingAppointments(formatted)
+
+      // Update Chart (Pending + Confirmed)
+      calculateWeeklyStats([...pendingData, ...confirmedData])
+
+    }).catch(err => console.error('Failed to fetch dashboard data:', err))
+  }, [])
+
+  const calculateWeeklyStats = (reservations) => {
+    const now = new Date()
+    const currentDay = now.getDay() // 0=Sun, 1=Mon, ...
+    const diffToMon = currentDay === 0 ? 6 : currentDay - 1
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - diffToMon)
+    monday.setHours(0, 0, 0, 0)
+
+    const counts = [0, 0, 0, 0, 0, 0, 0]
+
+    reservations.forEach(r => {
+      const d = new Date(r.reservationDate)
+      const diffTime = d.getTime() - monday.getTime()
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+      
+      if (diffDays >= 0 && diffDays < 7) {
+        counts[diffDays]++
+      }
+    })
+    setWeeklyStats(counts)
+  }
 
   const handleAction = (action) => {
     if (action === 'approve') {
@@ -47,25 +104,27 @@ export default function StaffDashboard() {
     setSelectedAppointment(null)
   }
 
+  // Calculate max for chart scaling
+  const maxStat = Math.max(...weeklyStats, 10)
+
   return (
     <div className="dash-bg">
-      <DashboardNav userName="German Velasco" active="Dashboard" items={["Dashboard", "My Appointments", "Schedules", "Analytics"]} role="STAFF" />
+      <DashboardNav userName={staffName} active="Dashboard" items={["Dashboard", "Manage Appointments", "Schedules", "Analytics"]} role="STAFF" />
 
       <main className="container dash-main">
-        <div className="role-badge">Logged in as Staff</div>
-        <h1 className="dash-title">Welcome back, German!</h1>
+        <h1 className="dash-title">Welcome back, {staffName.split(' ')[0]}!</h1>
 
         <div className="stat-row">
           <div className="stat-card">
-            <div className="stat-value">24</div>
+            <div className="stat-value">{stats.pending}</div>
             <div className="stat-label">Pending Appointments</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">11</div>
+            <div className="stat-value">{stats.confirmed}</div>
             <div className="stat-label">Confirmed Appointments</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">15</div>
+            <div className="stat-value">{stats.patients}</div>
             <div className="stat-label">Total Patients</div>
           </div>
         </div>
@@ -84,36 +143,44 @@ export default function StaffDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {pending.map((p, i) => (
-                  <tr key={i}>
-                    <td>{p.name}</td>
-                    <td>{p.doctor}</td>
-                    <td>{p.dt}</td>
-                    <td className="dim">{p.reason}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button
-                        onClick={() => {
-                          setSelectedAppointment(p)
-                          setPendingModalOpen(true)
-                        }}
-                        style={{
-                          backgroundColor: 'rgb(37, 99, 235)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '32px',
-                          height: '32px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        &gt;
-                      </button>
+                {pendingAppointments.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{textAlign: 'center', padding: '2rem', color: '#64748b'}}>
+                      No pending appointments found.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  pendingAppointments.map((p, i) => (
+                    <tr key={i}>
+                      <td>{p.name}</td>
+                      <td>{p.doctor}</td>
+                      <td>{p.dt}</td>
+                      <td className="dim">{p.reason}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedAppointment(p)
+                            setPendingModalOpen(true)
+                          }}
+                          style={{
+                            backgroundColor: 'rgb(37, 99, 235)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          &gt;
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -122,12 +189,16 @@ export default function StaffDashboard() {
         <section className="card chart-card">
           <div className="chart-title">Bookings This Week</div>
           <div className="bar-chart">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
-              <div key={d} className="bar">
-                <div className="bar-fill" style={{ height: (10 + (i % 7) * 8) + '%' }}></div>
-                <span className="bar-label">{d}</span>
-              </div>
-            ))}
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => {
+               const count = weeklyStats[i]
+               const height = (count / maxStat) * 100
+               return (
+                <div key={d} className="bar">
+                  <div className="bar-fill" style={{ height: `${Math.max(height, 5)}%` }} title={`${count} bookings`}></div>
+                  <span className="bar-label">{d}</span>
+                </div>
+               )
+            })}
           </div>
         </section>
       </main>

@@ -79,6 +79,7 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
                 if (role === 'STAFF') href = '/dashboard/staff/appointments'
                 else href = '/dashboard/patient/appointments'
               }
+              if (label === 'Manage Appointments' && role === 'STAFF') href = '/dashboard/staff/appointments'
               return <Link key={label} to={href} className={label === active ? 'active' : ''}>{label}</Link>
             })}
           </nav>
