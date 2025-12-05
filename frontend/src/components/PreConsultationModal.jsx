@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import './ProfileModal.css'; // Reusing modal styles
 
 export default function PreConsultationModal({ appointment, open, onClose, onAction }) {
     if (!open || !appointment) return null;
+
+    // Parse the JSON data safely
+    const data = useMemo(() => {
+        try {
+            return JSON.parse(appointment.raw.preConsultationData || '{}')
+        } catch (e) {
+            console.error("Failed to parse pre-consultation data", e)
+            return {}
+        }
+    }, [appointment]);
+
+    const patient = appointment.raw.patient || {};
+    const dob = patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A';
 
     return (
         <div className="modal-overlay">
@@ -63,24 +76,24 @@ export default function PreConsultationModal({ appointment, open, onClose, onAct
                     }}>
                         <div style={{ display: 'grid', gap: '10px' }}>
                             <div style={{ display: 'flex', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>
-                                <span style={{ fontWeight: 'bold', width: '180px' }}>Date of Birth:</span>
-                                <span>01/01/2001</span>
+                                <span style={{ fontWeight: 'bold', width: '180px', color: '#000' }}>Date of Birth:</span>
+                                <span style={{ color: '#333' }}>{dob}</span>
                             </div>
                             <div style={{ display: 'flex', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>
-                                <span style={{ fontWeight: 'bold', width: '180px' }}>Gender:</span>
-                                <span>Male</span>
+                                <span style={{ fontWeight: 'bold', width: '180px', color: '#000' }}>Gender:</span>
+                                <span style={{ color: '#333' }}>{patient.gender || 'N/A'}</span>
                             </div>
                             <div style={{ display: 'flex', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>
-                                <span style={{ fontWeight: 'bold', width: '180px' }}>Known Allergies:</span>
-                                <span>Penicillin (causes rash), Peanuts</span>
+                                <span style={{ fontWeight: 'bold', width: '180px', color: '#000' }}>Known Allergies:</span>
+                                <span style={{ color: '#333' }}>{data.knownAllergies || 'None'}</span>
                             </div>
                             <div style={{ display: 'flex', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>
-                                <span style={{ fontWeight: 'bold', width: '180px' }}>Current Medications:</span>
-                                <span>Albuterol Inhaler (as needed), Claritin 10mg (daily)</span>
+                                <span style={{ fontWeight: 'bold', width: '180px', color: '#000' }}>Current Medications:</span>
+                                <span style={{ color: '#333' }}>{data.currentMedications || 'None'}</span>
                             </div>
                             <div style={{ display: 'flex' }}>
-                                <span style={{ fontWeight: 'bold', width: '180px' }}>Medical History:</span>
-                                <span>Asthma (diagnosed 2010), Seasonal Allergies</span>
+                                <span style={{ fontWeight: 'bold', width: '180px', color: '#000' }}>Medical History:</span>
+                                <span style={{ color: '#333' }}>{data.medicalHistory || 'None'}</span>
                             </div>
                         </div>
                     </div>
@@ -92,23 +105,26 @@ export default function PreConsultationModal({ appointment, open, onClose, onAct
                         padding: '20px'
                     }}>
                         <div style={{ marginBottom: '15px' }}>
-                            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Reason for Visit:</span>
-                            <span>{appointment.reason || "Follow-up on persistent cough"}</span>
+                            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', color: '#000' }}>Reason for Visit:</span>
+                            <span style={{ color: '#333' }}>{appointment.reason || "N/A"}</span>
                         </div>
 
                         <div style={{ marginBottom: '15px' }}>
-                            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Reported Symptoms:</span>
-                            <ul style={{ margin: '0', paddingLeft: '20px' }}>
-                                <li>Cough</li>
-                                <li>Fatigue</li>
-                                <li>Sore Throat</li>
-                            </ul>
+                            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', color: '#000' }}>Reported Symptoms:</span>
+                            {/* Check if currentSymptoms is an array or string/null */}
+                            {Array.isArray(data.currentSymptoms) && data.currentSymptoms.length > 0 ? (
+                                <ul style={{ margin: '0', paddingLeft: '20px', color: '#333' }}>
+                                    {data.currentSymptoms.map((s, i) => <li key={i}>{s}</li>)}
+                                </ul>
+                            ) : (
+                                <span style={{ color: '#333' }}>None reported</span>
+                            )}
                         </div>
 
                         <div>
-                            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Patient's Detailed Description:</span>
-                            <p style={{ margin: '0', lineHeight: '1.5' }}>
-                                The cough started 3 weeks ago and hasn't improved with over-the-counter medication. It's worse at night and interferes with sleep. I also feel generally tired and have a mild sore throat in the mornings.
+                            <span style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', color: '#000' }}>Patient's Detailed Description:</span>
+                            <p style={{ margin: '0', lineHeight: '1.5', color: '#333' }}>
+                                {data.detailedDescription || 'No description provided.'}
                             </p>
                         </div>
                     </div>
