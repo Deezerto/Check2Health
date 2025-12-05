@@ -27,42 +27,106 @@ public class DoctorScheduleService {
         this.doctorRepository = doctorRepository;
     }
 
-    public List<DoctorSchedule> getByDoctor(Long doctorId) {
-        return doctorScheduleRepository.findByDoctor_DoctorID(doctorId);
+    public List<DoctorSchedule> getByDoctor(long doctorId, java.time.LocalDate weekStart) {
+        if (weekStart == null) {
+            return doctorScheduleRepository.findByDoctor_DoctorID(doctorId);
+        }
+        java.time.LocalDate weekEnd = weekStart.plusDays(6);
+        return doctorScheduleRepository.findByDoctor_DoctorIDAndSpecificDateBetween(doctorId, weekStart, weekEnd);
     }
 
     @Transactional
-    public List<DoctorSchedule> upsertDoctorWeek(Long doctorId, List<ScheduleDto> week) {
+    public List<DoctorSchedule> upsertDoctorWeek(long doctorId, List<ScheduleDto> week, java.time.LocalDate weekStart) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Doctor not found"));
 
         List<DoctorSchedule> saved = new ArrayList<>();
-        for (ScheduleDto dto : week) {
-            String day = normalize(dto.dayOfWeek());
-            DoctorSchedule s = doctorScheduleRepository
-                    .findByDoctor_DoctorIDAndDayOfWeekIgnoreCase(doctorId, day)
-                    .orElseGet(() -> {
-                        DoctorSchedule n = new DoctorSchedule();
-                        n.setDoctor(doctor);
-                        n.setDayOfWeek(day);
-                        return n;
-                    });
-            s.setActive(dto.isActive());
-            s.setStartTime(
-                    dto.startTime() != null && !dto.startTime().isBlank() ? LocalTime.parse(dto.startTime()) : null);
-            s.setEndTime(dto.endTime() != null && !dto.endTime().isBlank() ? LocalTime.parse(dto.endTime()) : null);
-            saved.add(doctorScheduleRepository.save(s));
+
+        // If weekStart is provided, we are saving for a specific week
+        if (weekStart != null) {
+            java.time.LocalDate weekEnd = weekStart.plusDays(6);
+            List<DoctorSchedule> existing = doctorScheduleRepository
+                    .findByDoctor_DoctorIDAndSpecificDateBetween(doctorId, weekStart, weekEnd);
+
+            for (ScheduleDto dto : week) {
+                String day = normalize(dto.dayOfWeek());
+                // Calculate the specific date for this day of the week
+                int dayIndex = getDayIndex(day); // 0=Monday, 6=Sunday
+                if (dayIndex == -1)
+                    continue;
+
+                java.time.LocalDate targetDate = weekStart.plusDays(dayIndex);
+
+                DoctorSchedule s = existing.stream()
+                        .filter(e -> e.getSpecificDate() != null && e.getSpecificDate().equals(targetDate))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            DoctorSchedule n = new DoctorSchedule();
+                            n.setDoctor(doctor);
+                            n.setDayOfWeek(day);
+                            n.setSpecificDate(targetDate);
+                            return n;
+                        });
+
+                s.setActive(dto.isActive());
+                s.setStartTime(dto.startTime() != null && !dto.startTime().isBlank() ? LocalTime.parse(dto.startTime())
+                        : null);
+                s.setEndTime(dto.endTime() != null && !dto.endTime().isBlank() ? LocalTime.parse(dto.endTime()) : null);
+                saved.add(doctorScheduleRepository.save(s));
+            }
+        } else {
+            // Fallback to old behavior (generic weekly schedule) - or we can decide to
+            // deprecate it
+            for (ScheduleDto dto : week) {
+                String day = normalize(dto.dayOfWeek());
+                DoctorSchedule s = doctorScheduleRepository
+                        .findByDoctor_DoctorIDAndDayOfWeekIgnoreCase(doctorId, day)
+                        .orElseGet(() -> {
+                            DoctorSchedule n = new DoctorSchedule();
+                            n.setDoctor(doctor);
+                            n.setDayOfWeek(day);
+                            return n;
+                        });
+                s.setActive(dto.isActive());
+                s.setStartTime(
+                        dto.startTime() != null && !dto.startTime().isBlank() ? LocalTime.parse(dto.startTime())
+                                : null);
+                s.setEndTime(dto.endTime() != null && !dto.endTime().isBlank() ? LocalTime.parse(dto.endTime()) : null);
+                saved.add(doctorScheduleRepository.save(s));
+            }
         }
         return saved;
     }
 
     public List<DoctorSchedule> allActive() {
-        // Simple: return all schedules; frontend filters active
         return doctorScheduleRepository.findAll();
     }
 
     private String normalize(String d) {
         return d == null ? null : d.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private int getDayIndex(String day) {
+        if (day == null)
+            return -1;
+        switch (day.toUpperCase()) {
+            case "MONDAY":
+                return 0;
+            case "TUESDAY":
+                return 1;
+            case "WEDNESDAY":
+                return 2;
+            case "THURSDAY":
+                return 3;
+            case "FRIDAY":
+                return 4;
+            case "SATURDAY":
+                return 5;
+            case "SUNDAY":
+                return 6;
+            default:
+                return -1;
+        }
     }
 
     public record ScheduleDto(String dayOfWeek, boolean isActive, String startTime, String endTime) {
