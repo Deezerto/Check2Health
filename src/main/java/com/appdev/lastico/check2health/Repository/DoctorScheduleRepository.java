@@ -10,4 +10,7 @@ public interface DoctorScheduleRepository extends JpaRepository<DoctorSchedule, 
     List<DoctorSchedule> findByDoctor_DoctorID(Long doctorId);
 
     Optional<DoctorSchedule> findByDoctor_DoctorIDAndDayOfWeekIgnoreCase(Long doctorId, String dayOfWeek);
+
+    List<DoctorSchedule> findByDoctor_DoctorIDAndSpecificDateBetween(Long doctorId, java.time.LocalDate start,
+            java.time.LocalDate end);
 }
