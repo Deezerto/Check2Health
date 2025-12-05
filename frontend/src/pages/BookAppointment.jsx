@@ -233,6 +233,14 @@ export default function BookAppointment() {
     const appointmentDate = new Date(selectedDate)
     appointmentDate.setHours(hours, parseInt(minutesStr, 10), 0, 0)
 
+    // Fix: Send local time string instead of UTC
+    const year = appointmentDate.getFullYear();
+    const month = String(appointmentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(appointmentDate.getDate()).padStart(2, '0');
+    const hh = String(appointmentDate.getHours()).padStart(2, '0');
+    const mm = String(appointmentDate.getMinutes()).padStart(2, '0');
+    const localIsoDate = `${year}-${month}-${day}T${hh}:${mm}:00`;
+
     setSelectedSlot({
       time,
       selectedTime: time,
@@ -240,7 +248,7 @@ export default function BookAppointment() {
       doctorId: selectedDoctor,
       doctorFullName,
       scheduleId: schedule?.scheduleId,
-      appointmentDate: appointmentDate.toISOString(),
+      appointmentDate: localIsoDate,
       dateLabel: selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     })
   }
