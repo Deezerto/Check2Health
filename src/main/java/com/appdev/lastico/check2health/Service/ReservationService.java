@@ -39,7 +39,7 @@ public class ReservationService {
 
         // Parse ISO 8601 datetime string (e.g., "2024-01-15T14:30:00.000Z")
         String dateStr = payload.get("reservationDate").toString();
-        LocalDateTime reservationDate = ZonedDateTime.parse(dateStr, DateTimeFormatter.ISO_DATE_TIME).toLocalDateTime();
+        LocalDateTime reservationDate = LocalDateTime.parse(dateStr);
 
         Reservation reservation = new Reservation();
         reservation.setPatient(patient);
@@ -111,10 +111,11 @@ public class ReservationService {
         return reservationRepository.save(reservation);
     }
 
-    public Reservation updateConsultation(Long reservationId, String doctorNotes, String postConsultationData, String status) {
+    public Reservation updateConsultation(Long reservationId, String doctorNotes, String postConsultationData,
+            String status) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                                    .orElseThrow(() -> new EntityNotFoundException("Reservation not found with id " + reservationId));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Reservation not found with id " + reservationId));
+
         if (doctorNotes != null) {
             reservation.setDoctorNotes(doctorNotes);
         }
@@ -124,7 +125,7 @@ public class ReservationService {
         if (status != null) {
             reservation.setReservationStatus(status); // e.g., "COMPLETED"
         }
-        
+
         return reservationRepository.save(reservation);
     }
 }
