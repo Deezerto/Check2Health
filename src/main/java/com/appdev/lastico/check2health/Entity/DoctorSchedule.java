@@ -74,6 +74,17 @@ public class DoctorSchedule {
         this.endTime = endTime;
     }
 
+    @Column(name = "specific_date")
+    private java.time.LocalDate specificDate;
+
+    public java.time.LocalDate getSpecificDate() {
+        return specificDate;
+    }
+
+    public void setSpecificDate(java.time.LocalDate specificDate) {
+        this.specificDate = specificDate;
+    }
+
     public boolean isActive() {
         return active;
     }

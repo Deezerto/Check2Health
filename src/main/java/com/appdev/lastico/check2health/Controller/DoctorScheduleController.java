@@ -17,14 +17,16 @@ public class DoctorScheduleController {
     }
 
     @GetMapping("/doctor/{doctorId}")
-    public List<DoctorSchedule> getForDoctor(@PathVariable Long doctorId) {
-        return doctorScheduleService.getByDoctor(doctorId);
+    public List<DoctorSchedule> getForDoctor(@PathVariable Long doctorId,
+            @RequestParam(required = false) java.time.LocalDate date) {
+        return doctorScheduleService.getByDoctor(doctorId, date);
     }
 
     @PutMapping("/doctor/{doctorId}")
     public List<DoctorSchedule> upsertForDoctor(@PathVariable Long doctorId,
-            @RequestBody List<DoctorScheduleService.ScheduleDto> week) {
-        return doctorScheduleService.upsertDoctorWeek(doctorId, week);
+            @RequestBody List<DoctorScheduleService.ScheduleDto> week,
+            @RequestParam(required = false) java.time.LocalDate date) {
+        return doctorScheduleService.upsertDoctorWeek(doctorId, week, date);
     }
 
     @GetMapping

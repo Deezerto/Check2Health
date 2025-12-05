@@ -2,30 +2,23 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardNav from '../components/DashboardNav'
 
-function weekInfo(baseDate = new Date()) {
-  const day = baseDate.getDay() || 7
-  const monday = new Date(baseDate)
-  monday.setDate(baseDate.getDate() - (day - 1))
-  const days = []
-  for (let i = 0; i < 7; i++) {
-    const dt = new Date(monday)
-    dt.setDate(monday.getDate() + i)
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const label = `${dt.getDate()} ${dayNames[dt.getDay()]}`
-    days.push({ date: dt, label, dayOfWeek: dayNames[dt.getDay()].toUpperCase() })
-  }
-  return days
-}
-
 export default function BookAppointment() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [currentWeek, setCurrentWeek] = useState(new Date())
-  const [days, setDays] = useState(weekInfo())
-  const [slots, setSlots] = useState([])
+
+  // Auth State
+  const [userName, setUserName] = useState('User')
+
+  // Calendar & Booking State
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedDoctor, setSelectedDoctor] = useState('')
+  const [doctors, setDoctors] = useState([])
+  const [allSchedules, setAllSchedules] = useState([])
+  const [availabilitySlots, setAvailabilitySlots] = useState({ morning: [], afternoon: [], evening: [] })
   const [selectedSlot, setSelectedSlot] = useState(null)
-  const [showTimePicker, setShowTimePicker] = useState(false)
-  const [timePickerSlot, setTimePickerSlot] = useState(null)
+
+  // Form Data State
   const [formData, setFormData] = useState({
     reasonForVisit: '',
     currentSymptoms: [],
@@ -34,8 +27,8 @@ export default function BookAppointment() {
     knownAllergies: '',
     currentMedications: ''
   })
-  const [userName, setUserName] = useState('User')
 
+  // Auth Check
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem('auth.user')
@@ -51,71 +44,205 @@ export default function BookAppointment() {
     }
   }, [navigate])
 
+  // Fetch Schedules & Doctors
   useEffect(() => {
-    setDays(weekInfo(currentWeek))
-  }, [currentWeek])
-
-  useEffect(() => {
-    if (step !== 1) return
     fetch('/api/schedules')
       .then(r => r.ok ? r.json() : [])
       .then(list => {
-        const m = { MONDAY: 0, TUESDAY: 1, WEDNESDAY: 2, THURSDAY: 3, FRIDAY: 4, SATURDAY: 5, SUNDAY: 6 }
-        const pills = []
-        list.filter(s => s.active).forEach(s => {
-          const idx = m[(s.dayOfWeek || '').toUpperCase()]
-          if (idx === undefined) return
-          const t = (s.startTime || '').slice(0, 5)
-          const [hh, mm] = t.split(':').map(n => parseInt(n, 10))
-          const ampm = hh >= 12 ? 'PM' : 'AM'
-          const hour12 = ((hh + 11) % 12) + 1
-          const time = `${hour12}:${String(mm).padStart(2, '0')} ${ampm}`
-          const doc = s.doctor ? `Dr. ${s.doctor.lastName || ''}` : 'Doctor'
-          pills.push({
-            day: idx,
-            time,
-            timeValue: t,
-            doctor: doc,
-            doctorId: s.doctor?.doctorId,
-            doctorFullName: s.doctor ? `${s.doctor.firstName || ''} ${s.doctor.lastName || ''}`.trim() : 'Doctor',
-            scheduleId: s.scheduleId
-          })
-        })
-        setSlots(pills)
+        setAllSchedules(list)
+
+        // Extract unique doctors
+        const uniqueDoctors = [];
+        const map = new Map();
+        list.forEach(s => {
+          if (s.doctor && !map.has(s.doctor.doctorId)) {
+            map.set(s.doctor.doctorId, true);
+            uniqueDoctors.push({
+              id: s.doctor.doctorId,
+              firstName: s.doctor.firstName,
+              lastName: s.doctor.lastName
+            });
+          }
+        });
+        setDoctors(uniqueDoctors);
+        if (uniqueDoctors.length > 0) {
+          setSelectedDoctor(uniqueDoctors[0].id);
+        }
       })
-  }, [step])
+      .catch(() => { })
+  }, [])
 
-  const prevWeek = () => {
-    const newDate = new Date(currentWeek)
-    newDate.setDate(newDate.getDate() - 7)
-    setCurrentWeek(newDate)
+  // Calendar Helpers
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const days = new Date(year, month + 1, 0).getDate()
+    const firstDay = new Date(year, month, 1).getDay() // 0 = Sun
+    const res = []
+    for (let i = 0; i < firstDay; i++) res.push(null)
+    for (let i = 1; i <= days; i++) res.push(new Date(year, month, i))
+    return res
   }
 
-  const nextWeek = () => {
-    const newDate = new Date(currentWeek)
-    newDate.setDate(newDate.getDate() + 7)
-    setCurrentWeek(newDate)
+  const isSameDate = (d1, d2) => {
+    return d1 && d2 &&
+      d1.getDate() === d2.getDate() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getFullYear() === d2.getFullYear()
   }
 
-  const handleSlotClick = (slot, dayIndex) => {
-    setTimePickerSlot({ ...slot, dayIndex })
-    setShowTimePicker(true)
+  const hasAvailability = (date) => {
+    if (!date || !selectedDoctor) return false
+    const dateStr = date.toLocaleDateString('en-CA') // YYYY-MM-DD
+    const dayOfWeek = date.toLocaleString('en-US', { weekday: 'long' }).toUpperCase()
+
+    // 1. Try to find specific date schedule
+    const specificSchedule = allSchedules.find(s =>
+      s.active &&
+      s.doctor &&
+      String(s.doctor.doctorId) === String(selectedDoctor) &&
+      s.specificDate === dateStr
+    )
+
+    if (specificSchedule) return true
+
+    // 2. Fallback to generic schedule (only if no specific schedule exists for this date)
+    // Note: If the system is fully migrated to weekly, generic might be deprecated, but keeping for safety.
+    const genericSchedule = allSchedules.find(s =>
+      s.active &&
+      s.doctor &&
+      String(s.doctor.doctorId) === String(selectedDoctor) &&
+      s.dayOfWeek.toUpperCase() === dayOfWeek &&
+      !s.specificDate
+    )
+
+    return !!genericSchedule
   }
 
-  const handleTimeConfirm = (time) => {
-    if (!timePickerSlot) return
-    const dayData = days[timePickerSlot.dayIndex]
-    const [hours, minutes] = time.split(':')
-    const appointmentDate = new Date(dayData.date)
-    appointmentDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
-    
+  // Generate Slots
+  useEffect(() => {
+    if (!selectedDoctor || !selectedDate) {
+      setAvailabilitySlots({ morning: [], afternoon: [], evening: [] })
+      setSelectedSlot(null) // Reset selection on date/doctor change
+      return
+    }
+
+    const dateStr = selectedDate.toLocaleDateString('en-CA') // YYYY-MM-DD
+    const dayOfWeek = selectedDate.toLocaleString('en-US', { weekday: 'long' }).toUpperCase()
+
+    // 1. Try specific date
+    let schedule = allSchedules.find(s =>
+      s.active &&
+      s.doctor &&
+      String(s.doctor.doctorId) === String(selectedDoctor) &&
+      s.specificDate === dateStr
+    )
+
+    // 2. Fallback to generic
+    if (!schedule) {
+      schedule = allSchedules.find(s =>
+        s.active &&
+        s.doctor &&
+        String(s.doctor.doctorId) === String(selectedDoctor) &&
+        s.dayOfWeek.toUpperCase() === dayOfWeek &&
+        !s.specificDate
+      )
+    }
+
+    if (!schedule) {
+      setAvailabilitySlots({ morning: [], afternoon: [], evening: [] })
+      return
+    }
+
+    const startStr = (schedule.startTime || '').slice(0, 5)
+    const endStr = (schedule.endTime || '').slice(0, 5)
+
+    if (!startStr || !endStr) {
+      setAvailabilitySlots({ morning: [], afternoon: [], evening: [] })
+      return
+    }
+
+    const [startH, startM] = startStr.split(':').map(Number)
+    const [endH, endM] = endStr.split(':').map(Number)
+
+    let current = new Date()
+    current.setHours(startH, startM, 0, 0)
+    const end = new Date()
+    end.setHours(endH, endM, 0, 0)
+
+    const morning = []
+    const afternoon = []
+    const evening = []
+
+    while (current <= end) {
+      const h = current.getHours()
+      const m = current.getMinutes()
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const h12 = h % 12 || 12
+      const timeStr = `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+
+      if (h < 12) morning.push(timeStr)
+      else if (h < 17) afternoon.push(timeStr)
+      else evening.push(timeStr)
+
+      current.setMinutes(current.getMinutes() + 30)
+    }
+
+    setAvailabilitySlots({ morning, afternoon, evening })
+  }, [selectedDoctor, selectedDate, allSchedules])
+
+  const changeMonth = (offset) => {
+    const newDate = new Date(currentDate)
+    newDate.setMonth(newDate.getMonth() + offset)
+    setCurrentDate(newDate)
+  }
+
+  const handleSlotSelection = (time) => {
+    const dateStr = selectedDate.toLocaleDateString('en-CA') // YYYY-MM-DD
+    const dayOfWeek = selectedDate.toLocaleString('en-US', { weekday: 'long' }).toUpperCase()
+
+    // 1. Try specific date
+    let schedule = allSchedules.find(s =>
+      s.active &&
+      s.doctor &&
+      String(s.doctor.doctorId) === String(selectedDoctor) &&
+      s.specificDate === dateStr
+    )
+
+    // 2. Fallback to generic
+    if (!schedule) {
+      schedule = allSchedules.find(s =>
+        s.active &&
+        s.doctor &&
+        String(s.doctor.doctorId) === String(selectedDoctor) &&
+        s.dayOfWeek.toUpperCase() === dayOfWeek &&
+        !s.specificDate
+      )
+    }
+
+    const doctorObj = doctors.find(d => String(d.id) === String(selectedDoctor))
+    const doctorFullName = doctorObj ? `Dr. ${doctorObj.firstName} ${doctorObj.lastName}` : 'Doctor'
+
+    // Construct appointment date
+    const [timePart, ampm] = time.split(' ')
+    const [hoursStr, minutesStr] = timePart.split(':')
+    let hours = parseInt(hoursStr, 10)
+    if (ampm === 'PM' && hours < 12) hours += 12
+    if (ampm === 'AM' && hours === 12) hours = 0
+
+    const appointmentDate = new Date(selectedDate)
+    appointmentDate.setHours(hours, parseInt(minutesStr, 10), 0, 0)
+
     setSelectedSlot({
-      ...timePickerSlot,
+      time,
       selectedTime: time,
+      doctor: doctorFullName,
+      doctorId: selectedDoctor,
+      doctorFullName,
+      scheduleId: schedule?.scheduleId,
       appointmentDate: appointmentDate.toISOString(),
-      dateLabel: dayData.label
+      dateLabel: selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     })
-    setShowTimePicker(false)
   }
 
   const handleSymptomToggle = (symptom) => {
@@ -193,15 +320,14 @@ export default function BookAppointment() {
     }
   }
 
-  const monthYear = days[0]?.date 
-    ? `${days[0].date.toLocaleString('default', { month: 'long' })} ${days[0].date.getFullYear()}`
-    : ''
+  const calendarDays = getDaysInMonth(currentDate)
+  const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
 
   return (
     <div className="dash-bg">
       <DashboardNav userName={userName} active="Dashboard" items={["Dashboard", "My Appointments"]} />
-      
-      <main className="container dash-main">
+
+      <main className="container dash-main" style={{ width: '95%', maxWidth: '1600px' }}>
         <div className="booking-container">
           {/* Progress Bar */}
           <div className="booking-progress">
@@ -221,46 +347,195 @@ export default function BookAppointment() {
             <div className="booking-card">
               <div className="booking-header">
                 <h2>Book an Appointment</h2>
-                <p>Please select your desired time slot</p>
+                <p>Please select your doctor and desired time slot</p>
               </div>
 
-              <div className="booking-body">
-                <div className="week-nav">
-                  <button onClick={prevWeek} className="week-nav-btn">&lt; Previous Week</button>
-                  <h3 className="month-title">{monthYear}</h3>
-                  <button onClick={nextWeek} className="week-nav-btn">Next Week &gt;</button>
-                </div>
+              <div className="booking-body" style={{ padding: '0' }}>
+                <div className="card" style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                  padding: '20px',
+                  minHeight: '400px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '30px' }}>
 
-                <div className="weekly-view">
-                  <div className="calendar">
-                    {days.map((d, i) => {
-                      const daySlots = slots.filter(s => s.day === i)
-                      return (
-                        <div key={d.label} className="cal-col">
-                          <div className="cal-col-head">{d.label}</div>
-                          <div className="cal-col-body">
-                            {daySlots.length === 0 ? (
-                              <div className="no-slots">No Slots</div>
-                            ) : (
-                              daySlots.map((s, idx) => (
-                                <button
-                                  key={idx}
-                                  className={`pill clickable ${selectedSlot?.scheduleId === s.scheduleId && selectedSlot?.selectedTime ? 'selected' : ''}`}
-                                  onClick={() => handleSlotClick(s, i)}
-                                >
-                                  <div className="pill-time">{s.time}</div>
-                                  <div className="pill-doc">{s.doctor}</div>
-                                </button>
-                              ))
-                            )}
-                          </div>
+                    {/* Left Column: Filter & Calendar */}
+                    <div style={{ borderRight: '1px solid #eee', paddingRight: '30px' }}>
+                      {/* Doctor Filter */}
+                      <div style={{ marginBottom: '20px', position: 'relative' }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>Select Doctor</label>
+                        <div style={{ position: 'relative' }}>
+                          <select
+                            className="input"
+                            style={{
+                              width: '100%',
+                              padding: '8px',
+                              paddingRight: '30px',
+                              borderRadius: '8px',
+                              border: '1px solid rgb(226, 232, 240)',
+                              appearance: 'none',
+                              backgroundColor: 'rgb(255, 255, 255)',
+                              fontSize: '14px',
+                              color: 'rgb(0, 0, 0)',
+                              cursor: 'pointer'
+                            }}
+                            value={selectedDoctor}
+                            onChange={(e) => setSelectedDoctor(e.target.value)}
+                          >
+                            {doctors.map(d => (
+                              <option key={d.id} value={d.id}>Dr. {d.firstName} {d.lastName}</option>
+                            ))}
+                          </select>
+                          <span style={{
+                            position: 'absolute',
+                            right: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            pointerEvents: 'none',
+                            fontSize: '10px',
+                            color: '#64748b'
+                          }}>▼</span>
                         </div>
-                      )
-                    })}
+                      </div>
+
+                      {/* Mini Calendar */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <button onClick={() => changeMonth(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>&lt;</button>
+                          <span style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '14px' }}>{monthName}</span>
+                          <button onClick={() => changeMonth(1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>&gt;</button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', marginBottom: '5px' }}>
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                            <div key={d} style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>{d}</div>
+                          ))}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: '5px' }}>
+                          {calendarDays.map((date, i) => {
+                            if (!date) return <div key={i}></div>
+
+                            const isSelected = isSameDate(date, selectedDate)
+                            const isTodayDate = isSameDate(date, new Date())
+                            const available = hasAvailability(date)
+
+                            return (
+                              <div
+                                key={i}
+                                onClick={() => setSelectedDate(date)}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  padding: '2px'
+                                }}
+                              >
+                                <div style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '50%',
+                                  fontSize: '13px',
+                                  fontWeight: '500',
+                                  backgroundColor: isSelected ? '#5A9EF9' : (isTodayDate ? '#f1f5f9' : 'transparent'),
+                                  color: isSelected ? '#fff' : '#1e293b',
+                                  border: isTodayDate && !isSelected ? '1px solid #cbd5e1' : 'none'
+                                }}>
+                                  {date.getDate()}
+                                </div>
+                                {available && (
+                                  <div style={{
+                                    width: '3px',
+                                    height: '3px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#7ED957',
+                                    marginTop: '2px'
+                                  }}></div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Availability */}
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '380px' }}>
+                      <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1e293b', marginBottom: '15px', flexShrink: 0 }}>
+                        Availability for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      </h2>
+
+                      {availabilitySlots.morning.length === 0 && availabilitySlots.afternoon.length === 0 && availabilitySlots.evening.length === 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: '#475569' }}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#94a3b8', marginBottom: '10px' }}>
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                          </svg>
+                          <p style={{ fontSize: '14px' }}>No availability on this date</p>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', paddingRight: '10px', flex: 1 }}>
+                          {['Morning', 'Afternoon', 'Evening'].map(period => {
+                            const slots = availabilitySlots[period.toLowerCase()]
+                            if (slots.length === 0) return null
+                            return (
+                              <div key={period}>
+                                <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{period}</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
+                                  {slots.map(time => {
+                                    const isSelected = selectedSlot?.selectedTime === time && isSameDate(new Date(selectedSlot?.appointmentDate), selectedDate)
+                                    return (
+                                      <button
+                                        key={time}
+                                        onClick={() => handleSlotSelection(time)}
+                                        style={{
+                                          padding: '6px 10px',
+                                          backgroundColor: isSelected ? '#5A9EF9' : '#FFFFFF',
+                                          border: `1px solid ${isSelected ? '#5A9EF9' : '#e2e8f0'}`,
+                                          borderRadius: '20px',
+                                          color: isSelected ? '#FFFFFF' : '#475569',
+                                          fontSize: '14px',
+                                          fontWeight: '600',
+                                          textAlign: 'center',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          if (!isSelected) {
+                                            e.currentTarget.style.backgroundColor = '#eff6ff'
+                                            e.currentTarget.style.borderColor = '#5A9EF9'
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          if (!isSelected) {
+                                            e.currentTarget.style.backgroundColor = '#FFFFFF'
+                                            e.currentTarget.style.borderColor = '#e2e8f0'
+                                          }
+                                        }}
+                                      >
+                                        {time}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="booking-actions">
+                <div className="booking-actions" style={{ marginTop: '15px' }}>
                   <button className="btn btn-gray" onClick={() => navigate('/dashboard/patient')}>Back</button>
                   <button className="btn btn-blue" onClick={goToStep2} disabled={!selectedSlot}>
                     Next: Pre-Consultation Survey
@@ -393,26 +668,6 @@ export default function BookAppointment() {
                 <div className="booking-actions">
                   <button className="btn btn-gray" onClick={() => setStep(2)}>Back</button>
                   <button className="btn btn-blue" onClick={confirmBooking}>Confirm Booking</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Time Picker Modal */}
-          {showTimePicker && (
-            <div className="modal-overlay" onClick={() => setShowTimePicker(false)}>
-              <div className="time-picker-modal" onClick={e => e.stopPropagation()}>
-                <h3>Select Appointment Time</h3>
-                <p>Doctor: {timePickerSlot?.doctor}</p>
-                <p>Available from: {timePickerSlot?.time}</p>
-                <input
-                  type="time"
-                  className="time-input"
-                  defaultValue={timePickerSlot?.timeValue}
-                  onChange={e => handleTimeConfirm(e.target.value)}
-                />
-                <div className="time-picker-actions">
-                  <button className="btn btn-gray" onClick={() => setShowTimePicker(false)}>Cancel</button>
                 </div>
               </div>
             </div>
