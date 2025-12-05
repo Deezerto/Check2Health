@@ -1,9 +1,12 @@
 import DashboardNav from '../components/DashboardNav'
+
 import AppointmentActionModal from '../components/AppointmentActionModal'
 import PreConsultationModal from '../components/PreConsultationModal'
 import RescheduleModal from '../components/RescheduleModal'
 import ApproveConfirmationModal from '../components/ApproveConfirmationModal'
 import DenyConfirmationModal from '../components/DenyConfirmationModal'
+import AlreadyApprovedModal from '../components/AlreadyApprovedModal'
+import AlreadyDeniedModal from '../components/AlreadyDeniedModal'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -25,6 +28,9 @@ function StatusBadge({ status }) {
     } else if (status === 'Cancelled') {
         color = '#fff'
         bg = '#dc3545'
+    } else if (status === 'Rescheduled') {
+        color = '#fff'
+        bg = '#fd7e14' // Orange
     }
 
     return (
@@ -52,8 +58,10 @@ export default function StaffAppointments() {
     const [rescheduleOpen, setRescheduleOpen] = useState(false)
     const [approveConfirmationOpen, setApproveConfirmationOpen] = useState(false)
     const [denyConfirmationOpen, setDenyConfirmationOpen] = useState(false)
+    const [alreadyApprovedModalOpen, setAlreadyApprovedModalOpen] = useState(false)
+    const [alreadyDeniedModalOpen, setAlreadyDeniedModalOpen] = useState(false)
     const [previousModal, setPreviousModal] = useState(null)
-    
+
     const [appointments, setAppointments] = useState([])
     const [staffName, setStaffName] = useState('')
 
@@ -72,7 +80,7 @@ export default function StaffAppointments() {
                 navigate('/login');
             }
         }
-        
+
         fetch('/api/reservations')
             .then(res => res.json())
             .then(data => {
@@ -80,8 +88,8 @@ export default function StaffAppointments() {
                     id: r.reservationID,
                     name: `${r.patient.firstName} ${r.patient.lastName}`,
                     doctor: `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`,
-                    dt: new Date(r.reservationDate).toLocaleString('en-US', { 
-                        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true 
+                    dt: new Date(r.reservationDate).toLocaleString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
                     }),
                     status: r.reservationStatus.charAt(0).toUpperCase() + r.reservationStatus.slice(1).toLowerCase(),
                     reason: r.reasonForVisit,
@@ -165,11 +173,43 @@ export default function StaffAppointments() {
     }
 
     const handleApproveConfirm = () => {
-        console.log('Appointment Approved')
-        setApproveConfirmationOpen(false)
-        setSelectedAppointment(null)
-        setPreviousModal(null)
-        // Add API call logic here later
+        if (!selectedAppointment) return
+
+        fetch(`/api/reservations/${selectedAppointment.id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'CONFIRMED' })
+        })
+            .then(res => {
+                if (res.ok) {
+                    alert('Appointment Approved!')
+                    // Refresh
+                    fetch('/api/reservations')
+                        .then(r => r.json())
+                        .then(data => {
+                            const formatted = data.map(r => ({
+                                id: r.reservationID,
+                                name: `${r.patient.firstName} ${r.patient.lastName}`,
+                                doctor: `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`,
+                                dt: new Date(r.reservationDate).toLocaleString('en-US', {
+                                    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
+                                }),
+                                status: r.reservationStatus.charAt(0).toUpperCase() + r.reservationStatus.slice(1).toLowerCase(),
+                                reason: r.reasonForVisit,
+                                raw: r
+                            }))
+                            setAppointments(formatted)
+                        })
+                } else {
+                    alert('Failed to approve appointment.')
+                }
+            })
+            .catch(err => console.error('Approve failed', err))
+            .finally(() => {
+                setApproveConfirmationOpen(false)
+                setSelectedAppointment(null)
+                setPreviousModal(null)
+            })
     }
 
     const handleDenyClose = () => {
@@ -185,11 +225,43 @@ export default function StaffAppointments() {
     }
 
     const handleDenyConfirm = () => {
-        console.log('Appointment Denied')
-        setDenyConfirmationOpen(false)
-        setSelectedAppointment(null)
-        setPreviousModal(null)
-        // Add API call logic here later
+        if (!selectedAppointment) return
+
+        fetch(`/api/reservations/${selectedAppointment.id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'CANCELLED' })
+        })
+            .then(res => {
+                if (res.ok) {
+                    alert('Appointment Denied (Cancelled).')
+                    // Refresh
+                    fetch('/api/reservations')
+                        .then(r => r.json())
+                        .then(data => {
+                            const formatted = data.map(r => ({
+                                id: r.reservationID,
+                                name: `${r.patient.firstName} ${r.patient.lastName}`,
+                                doctor: `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`,
+                                dt: new Date(r.reservationDate).toLocaleString('en-US', {
+                                    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
+                                }),
+                                status: r.reservationStatus.charAt(0).toUpperCase() + r.reservationStatus.slice(1).toLowerCase(),
+                                reason: r.reasonForVisit,
+                                raw: r
+                            }))
+                            setAppointments(formatted)
+                        })
+                } else {
+                    alert('Failed to deny appointment.')
+                }
+            })
+            .catch(err => console.error('Deny failed', err))
+            .finally(() => {
+                setDenyConfirmationOpen(false)
+                setSelectedAppointment(null)
+                setPreviousModal(null)
+            })
     }
 
     return (
@@ -306,27 +378,33 @@ export default function StaffAppointments() {
                                             <td style={{ padding: '16px', textAlign: 'center' }}>
                                                 <button
                                                     onClick={() => {
-                                                        setSelectedAppointment(apt)
-                                                        setModalOpen(true)
+                                                        if (apt.status === 'Confirmed') {
+                                                            setAlreadyApprovedModalOpen(true)
+                                                        } else if (apt.status === 'Cancelled') {
+                                                            setAlreadyDeniedModalOpen(true)
+                                                        } else {
+                                                            setSelectedAppointment(apt)
+                                                            setModalOpen(true)
+                                                        }
                                                     }}
-                                                style={{
-                                                    backgroundColor: '#2563eb',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '50%',
-                                                    width: '32px',
-                                                    height: '32px',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                &gt;
-                                            </button>
-                                        </td>
-                                    </tr>
-                                )))}
+                                                    style={{
+                                                        backgroundColor: '#2563eb',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '50%',
+                                                        width: '32px',
+                                                        height: '32px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    &gt;
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )))}
                             </tbody>
                         </table>
                     </div>
@@ -352,11 +430,71 @@ export default function StaffAppointments() {
                 appointment={selectedAppointment}
                 open={rescheduleOpen}
                 onClose={handleRescheduleClose}
-                onConfirm={() => {
-                    console.log('Reschedule confirmed')
-                    setRescheduleOpen(false)
-                    setSelectedAppointment(null)
-                    setPreviousModal(null)
+                onConfirm={(doctorId, dateTime) => {
+                    console.log('Reschedule confirmed:', doctorId, dateTime)
+
+                    if (!selectedAppointment) return;
+
+                    // Fetch the doctor object first? Or just patch the ID?
+                    // The backend expects a whole Reservation object usually for PUT.
+                    // But we can try to re-use the raw object and update fields.
+
+                    // We need to fetch the full doctor object or at least create a stub with ID if usage allows.
+                    // Instead of complex logic, let's just update what we can.
+                    // Actually, the PUT endpoint expects a full Reservation object.
+
+                    const updatedReservation = {
+                        ...selectedAppointment.raw,
+                        reservationDate: dateTime,
+                        doctor: { doctorID: doctorId } // This is risky if backend needs full doctor. Ideally we fetch doctor first.
+                    };
+
+                    // Let's fetch the doctor first to be safe, then update.
+                    fetch(`/api/doctors/${doctorId}`)
+                        .then(res => res.json())
+                        .then(doctor => {
+                            const payload = {
+                                ...selectedAppointment.raw,
+                                reservationDate: dateTime,
+                                reservationStatus: 'RESCHEDULED',
+                                doctor: doctor
+                            };
+
+                            fetch(`/api/reservations/${selectedAppointment.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            })
+                                .then(res => {
+                                    if (res.ok) {
+                                        alert("Appointment successfully rescheduled!");
+                                        setRescheduleOpen(false);
+                                        setSelectedAppointment(null);
+                                        setPreviousModal(null);
+                                        // Refresh list
+                                        fetch('/api/reservations')
+                                            .then(res => res.json())
+                                            .then(data => {
+                                                const formatted = data.map(r => ({
+                                                    id: r.reservationID,
+                                                    name: `${r.patient.firstName} ${r.patient.lastName}`,
+                                                    doctor: `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`,
+                                                    dt: new Date(r.reservationDate).toLocaleString('en-US', {
+                                                        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
+                                                    }),
+                                                    status: r.reservationStatus.charAt(0).toUpperCase() + r.reservationStatus.slice(1).toLowerCase(),
+                                                    reason: r.reasonForVisit,
+                                                    raw: r
+                                                }))
+                                                setAppointments(formatted)
+                                            })
+                                    } else {
+                                        alert("Failed to reschedule. Please try again.");
+                                    }
+                                })
+                                .catch(e => console.error("Update failed", e));
+                        })
+                        .catch(e => console.error("Doctor fetch failed", e));
                 }}
             />
 
@@ -371,6 +509,16 @@ export default function StaffAppointments() {
                 open={denyConfirmationOpen}
                 onClose={handleDenyClose}
                 onConfirm={handleDenyConfirm}
+            />
+
+            <AlreadyApprovedModal
+                open={alreadyApprovedModalOpen}
+                onClose={() => setAlreadyApprovedModalOpen(false)}
+            />
+
+            <AlreadyDeniedModal
+                open={alreadyDeniedModalOpen}
+                onClose={() => setAlreadyDeniedModalOpen(false)}
             />
         </div>
     )
