@@ -27,7 +27,7 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     if (user) {
-      fetch(`/api/reservations/doctor/${user.id}`)
+      fetch(`/api/reservations/doctor/${user.doctorId}`)
         .then(response => {
           if (!response.ok) {
             throw new Error('Network response was not ok');
@@ -35,17 +35,22 @@ export default function DoctorDashboard() {
           return response.json()
         })
         .then(data => {
-          const today = new Date().toISOString().split('T')[0];
+          // Use local date for comparison to avoid timezone issues
+          const today = new Date().toLocaleDateString('en-CA'); // Gets 'YYYY-MM-DD' in local time
+
           const todaysAppointments = data.filter(appointment => {
-            const appointmentDate = new Date(appointment.schedule.startTime).toISOString().split('T')[0];
-            return appointment.status === 'CONFIRMED' && appointmentDate === today;
+            // The backend sends `reservationDate` as a string like "2025-12-04T09:00:00"
+            // We extract just the date part for comparison.
+            const appointmentDate = appointment.reservationDate.split('T')[0];
+            return appointment.reservationStatus === 'CONFIRMED' && appointmentDate === today;
           });
 
           const formattedAppointments = todaysAppointments.map(appointment => ({
             id: appointment.reservationID,
             name: `${appointment.patient.firstName} ${appointment.patient.lastName}`,
-            time: new Date(appointment.schedule.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            reason: appointment.purpose,
+            // Use the correct 'reservationDate' field for time formatting
+            time: new Date(appointment.reservationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            reason: appointment.reasonForVisit, // Use 'reasonForVisit' from the entity
           }));
           setAppointments(formattedAppointments);
         })
@@ -95,7 +100,6 @@ export default function DoctorDashboard() {
             )}
           </ul>
         </section>
-
       </main>
     </div>
   )

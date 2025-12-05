@@ -44,12 +44,19 @@ public class Reservation {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String doctorNotes;
+
+    @Column(columnDefinition = "TEXT")
+    private String postConsultationData; // To store prescriptions as a JSON string
+
+
     public Reservation() {
     }
 
     public Reservation(Long reservationID, Patient patient, Doctor doctor, LocalDateTime reservationDate,
                       String reservationStatus, String reasonForVisit, String preConsultationData,
-                      LocalDateTime createdAt, LocalDateTime updatedAt) {
+                      LocalDateTime createdAt, LocalDateTime updatedAt, String doctorNotes, String postConsultationData) {
         this.reservationID = reservationID;
         this.patient = patient;
         this.doctor = doctor;
@@ -59,6 +66,8 @@ public class Reservation {
         this.preConsultationData = preConsultationData;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.doctorNotes = doctorNotes;
+        this.postConsultationData = postConsultationData;
     }
 
     public Long getReservationID() {
@@ -132,6 +141,23 @@ public class Reservation {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public String getDoctorNotes() {
+        return doctorNotes;
+    }
+
+    public void setDoctorNotes(String doctorNotes) {
+        this.doctorNotes = doctorNotes;
+    }
+
+    public String getPostConsultationData() {
+        return postConsultationData;
+    }
+
+    public void setPostConsultationData(String postConsultationData) {
+        this.postConsultationData = postConsultationData;
+    }
+
 
     @PrePersist
     protected void onCreate() {

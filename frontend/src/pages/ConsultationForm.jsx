@@ -1,25 +1,67 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import DashboardNav from '../components/DashboardNav'; 
-
-// UPDATED IMPORT: Pointing to the components folder for CSS
-import '../components/ConsultationForm.css'; 
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import DashboardNav from '../components/DashboardNav';
+import '../components/ConsultationForm.css';
 
 export default function ConsultationForm() {
   const navigate = useNavigate();
-  const { id } = useParams(); 
+  const { id } = useParams(); // Get appointment ID from URL
   
-  // State for form fields
-  const [notes, setNotes] = useState('');
+  const [patientName, setPatientName] = useState("Loading Patient...");
+  const [doctorNotes, setDoctorNotes] = useState('');
   const [prescriptions, setPrescriptions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // For form submission
+  const [fetchingData, setFetchingData] = useState(true); // For initial data fetch
+  const [error, setError] = useState(null); // For fetch or submission errors
+  const [user, setUser] = useState(null); // For DashboardNav
 
-  // Mock Patient Name
-  const patientName = "John Smith"; 
+  // Fetch logged-in user for DashboardNav
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('auth.user');
+      if (raw) {
+        setUser(JSON.parse(raw));
+      } else {
+        navigate('/login');
+      }
+    } catch {
+      navigate('/login');
+    }
+  }, [navigate]);
 
-  // Handlers
+  // Fetch appointment details to get patient name
+  useEffect(() => {
+    if (id) {
+      setFetchingData(true);
+      fetch(`/api/reservations/${id}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch appointment details for consultation.');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data && data.patient) {
+            setPatientName(`${data.patient.firstName} ${data.patient.lastName}`);
+          }
+          // Optionally load existing notes/prescriptions if editing an incomplete consultation
+          // if (data.doctorNotes) setDoctorNotes(data.doctorNotes);
+          // if (data.postConsultationData) setPrescriptions(JSON.parse(data.postConsultationData));
+          setError(null);
+        })
+        .catch(err => {
+          console.error("Fetch error:", err);
+          setError(err.message);
+          setPatientName("Error loading patient name");
+        })
+        .finally(() => {
+          setFetchingData(false);
+        });
+    }
+  }, [id]);
+
   const addPrescription = () => {
-    setPrescriptions([...prescriptions, { name: '', dosage: '', instructions: '' }]);
+    setPrescriptions([...prescriptions, { medicationName: '', dosage: '', instructions: '' }]);
   };
 
   const updatePrescription = (index, field, value) => {
@@ -33,29 +75,61 @@ export default function ConsultationForm() {
     setPrescriptions(updated);
   };
 
-  const handleComplete = () => {
+  const handleCompleteAppointment = () => {
     setLoading(true);
-    // Simulate Backend API Call
-    setTimeout(() => {
-      console.log("Saving:", { appointmentId: id, notes, prescriptions });
-      setLoading(false);
-      navigate('/dashboard/doctor');
-    }, 1500);
+    setError(null);
+
+    // Prepare data for backend
+    const postData = {
+      doctorNotes: doctorNotes,
+      postConsultationData: JSON.stringify(prescriptions), // Convert array of prescriptions to JSON string
+      reservationStatus: 'COMPLETED'
+    };
+
+    fetch(`/api/reservations/${id}/consultation`, { // Assuming a PATCH endpoint for updating consultation data
+      method: 'PATCH', // Or PUT, depending on your API design for partial updates
+      headers: {
+        'Content-Type': 'application/json',
+        // 'Authorization': `Bearer ${sessionStorage.getItem('auth.token')}` // Add token if authentication is needed
+      },
+      body: JSON.stringify(postData),
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to complete appointment.');
+        }
+        return response.json();
+      })
+      .then(() => {
+        navigate('/dashboard/doctor'); // Redirect to dashboard on success
+      })
+      .catch(err => {
+        console.error("Submission error:", err);
+        setError(err.message || 'Error completing appointment.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
+
+  if (fetchingData) {
+    return <div className="loading-screen">Loading consultation form...</div>;
+  }
 
   return (
     <div className="consultation-page">
       <DashboardNav 
-        userName="Dr. Elvin Lagamo" 
-        role="DOCTOR" 
-        active="My Schedule" 
-        items={['Dashboard', 'My Schedule', 'My Appointments']} 
+        userName={`Dr. ${user?.firstName || ''} ${user?.lastName || ''}`}
+        active="Dashboard" 
+        items={['Dashboard', 'My Schedule']} 
       />
 
       <div className="consultation-container">
         <div className="consultation-content">
           
           <h1 className="page-title">Consultation Notes: {patientName}</h1>
+
+          {error && <div className="error-message">{error}</div>}
 
           {/* Doctor's Notes Card */}
           <div className="form-card">
@@ -64,8 +138,9 @@ export default function ConsultationForm() {
             <textarea 
               className="notes-area" 
               placeholder="Patient presented with..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={doctorNotes}
+              onChange={(e) => setDoctorNotes(e.target.value)}
+              rows="8"
             />
           </div>
 
@@ -85,8 +160,8 @@ export default function ConsultationForm() {
                     <div className="presc-row">
                       <input 
                         placeholder="Medication Name" 
-                        value={p.name}
-                        onChange={(e) => updatePrescription(index, 'name', e.target.value)}
+                        value={p.medicationName}
+                        onChange={(e) => updatePrescription(index, 'medicationName', e.target.value)}
                         className="input-field"
                       />
                       <input 
@@ -113,14 +188,14 @@ export default function ConsultationForm() {
           <div className="action-buttons">
             <button 
               className="btn-cancel" 
-              onClick={() => navigate(-1)} 
+              onClick={() => navigate(-1)} // Go back to the previous page (Appointment Details)
               disabled={loading}
             >
               Cancel
             </button>
             <button 
               className="btn-complete" 
-              onClick={handleComplete}
+              onClick={handleCompleteAppointment}
               disabled={loading}
             >
               {loading ? 'Completing...' : 'Complete Appointment'}

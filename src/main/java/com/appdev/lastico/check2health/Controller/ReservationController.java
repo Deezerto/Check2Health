@@ -76,4 +76,18 @@ public class ReservationController {
         reservationService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/consultation")
+    public ResponseEntity<Reservation> updateConsultation(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        String doctorNotes = (String) payload.get("doctorNotes");
+        String postConsultationData = (String) payload.get("postConsultationData");
+        String status = (String) payload.get("reservationStatus");
+
+        try {
+            Reservation updatedReservation = reservationService.updateConsultation(id, doctorNotes, postConsultationData, status);
+            return ResponseEntity.ok(updatedReservation);
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

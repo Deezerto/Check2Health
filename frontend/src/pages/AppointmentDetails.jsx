@@ -5,7 +5,7 @@ import "../components/AppointmentDetails.css"; // Assuming this CSS file exists 
 
 export default function AppointmentDetails() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Gets the appointment ID from the URL (e.g., /dashboard/doctor/appointment/:id)
+  const { id } = useParams(); // Gets the appointment ID from the URL
   
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,16 +68,31 @@ export default function AppointmentDetails() {
     return <div className="error-screen">Appointment not found.</div>;
   }
 
+  // --- MODIFIED SECTION ---
+  // Parse the preConsultationData JSON string
+  let preconData = {};
+  try {
+    // Safely parse the JSON data from the backend
+    if (appointment.preConsultationData) {
+      preconData = JSON.parse(appointment.preConsultationData);
+    }
+  } catch (e) {
+    console.error("Failed to parse preConsultationData:", e);
+    // If parsing fails, preconData remains an empty object, preventing crashes
+  }
+
   // Formatting data for display
   const patient = appointment.patient;
   const patientName = patient ? `${patient.firstName} ${patient.lastName}` : "N/A";
   const dob = patient ? new Date(patient.birthdate).toLocaleDateString() : "N/A";
-
-  // NOTE: The backend 'Reservation' entity does not seem to have fields for allergies, medications,
-  // medical history, or a structured list of symptoms. 
-  // For now, these fields are left blank. They will need to be added to the backend `Reservation` entity
-  // and the data capture form used by the patient.
-  const symptoms = Array.isArray(appointment.symptoms) ? appointment.symptoms : [];
+  
+  // Use parsed data with fallbacks
+  const knownAllergies = preconData.knownAllergies || "None specified";
+  const currentMedications = preconData.currentMedications || "None specified";
+  const medicalHistory = preconData.medicalHistory || "None specified";
+  const symptoms = preconData.currentSymptoms || [];
+  const detailedDescription = preconData.detailedDescription || "No detailed description provided.";
+  // --- END OF MODIFIED SECTION ---
 
   return (
     <div className="app-details-page">
@@ -100,14 +115,15 @@ export default function AppointmentDetails() {
             Appointment: {patientName}
           </h1>
 
+          {/* This card now displays the parsed pre-consultation data */}
           <div className="info-card">
             <h2 className="card-header">Patient Info</h2>
             <div className="info-grid">
               <div className="info-row"><span className="label">Date of Birth:</span><span className="value">{dob}</span></div>
               <div className="info-row"><span className="label">Gender:</span><span className="value">{patient?.gender || "N/A"}</span></div>
-              <div className="info-row"><span className="label">Known Allergies:</span><span className="value">N/A</span></div>
-              <div className="info-row"><span className="label">Current Medications:</span><span className="value">N/A</span></div>
-              <div className="info-row"><span className="label">Medical History:</span><span className="value">N/A</span></div>
+              <div className="info-row"><span className="label">Known Allergies:</span><span className="value">{knownAllergies}</span></div>
+              <div className="info-row"><span className="label">Current Medications:</span><span className="value">{currentMedications}</span></div>
+              <div className="info-row"><span className="label">Medical History:</span><span className="value">{medicalHistory}</span></div>
             </div>
           </div>
 
@@ -116,7 +132,7 @@ export default function AppointmentDetails() {
             <div className="data-section">
               <div className="info-row">
                 <span className="label">Reason for Visit:</span>
-                <span className="value">{appointment.purpose || "N/A"}</span>
+                <span className="value">{appointment.reasonForVisit || "N/A"}</span>
               </div>
             </div>
             {symptoms.length > 0 && (
@@ -130,7 +146,7 @@ export default function AppointmentDetails() {
             <div className="data-section">
               <span className="label block-label">Patient's Detailed Description:</span>
               <p className="description-text">
-                {appointment.description || "No description provided."}
+                {detailedDescription}
               </p>
             </div>
           </div>

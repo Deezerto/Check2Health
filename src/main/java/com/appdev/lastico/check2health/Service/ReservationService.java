@@ -4,6 +4,7 @@ import com.appdev.lastico.check2health.Entity.Doctor;
 import com.appdev.lastico.check2health.Entity.Patient;
 import com.appdev.lastico.check2health.Entity.Reservation;
 import com.appdev.lastico.check2health.Repository.ReservationRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -107,6 +108,23 @@ public class ReservationService {
     public Reservation updateStatus(Long id, String status) {
         Reservation reservation = findById(id);
         reservation.setReservationStatus(status);
+        return reservationRepository.save(reservation);
+    }
+
+    public Reservation updateConsultation(Long reservationId, String doctorNotes, String postConsultationData, String status) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                                    .orElseThrow(() -> new EntityNotFoundException("Reservation not found with id " + reservationId));
+        
+        if (doctorNotes != null) {
+            reservation.setDoctorNotes(doctorNotes);
+        }
+        if (postConsultationData != null) {
+            reservation.setPostConsultationData(postConsultationData);
+        }
+        if (status != null) {
+            reservation.setReservationStatus(status); // e.g., "COMPLETED"
+        }
+        
         return reservationRepository.save(reservation);
     }
 }
