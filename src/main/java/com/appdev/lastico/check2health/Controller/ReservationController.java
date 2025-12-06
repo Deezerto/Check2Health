@@ -1,5 +1,6 @@
 package com.appdev.lastico.check2health.Controller;
 
+import com.appdev.lastico.check2health.DTO.ConsultationDetailsDTO;
 import com.appdev.lastico.check2health.Entity.Reservation;
 import com.appdev.lastico.check2health.Service.ReservationService;
 import org.springframework.http.ResponseEntity;
@@ -87,6 +88,19 @@ public class ReservationController {
             Reservation updatedReservation = reservationService.updateConsultation(id, doctorNotes, postConsultationData, status);
             return ResponseEntity.ok(updatedReservation);
         } catch (jakarta.persistence.EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{id}/consultation-details")
+    public ResponseEntity<ConsultationDetailsDTO> getConsultationDetails(@PathVariable Long id) {
+        try {
+            // Call the service to get the detailed consultation information
+            ConsultationDetailsDTO dto = reservationService.getConsultationDetails(id);
+            // Return the DTO with a 200 OK status
+            return ResponseEntity.ok(dto);
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // If the reservation is not found, return a 404 Not Found status
             return ResponseEntity.notFound().build();
         }
     }

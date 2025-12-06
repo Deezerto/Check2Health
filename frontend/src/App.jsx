@@ -1,4 +1,3 @@
-
 import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import Login from './pages/Login'
@@ -15,6 +14,7 @@ import BookAppointment from './pages/BookAppointment'
 import MyAppointments from './pages/MyAppointments'
 import AppointmentDetails from './pages/AppointmentDetails';
 import ConsultationForm from './pages/ConsultationForm';
+import ConsultationDetails from './pages/ConsultationDetails'; // Import the new component
 import './components/ProfileModal.css'
 import './styles/profile-extra.css'
 
@@ -28,6 +28,8 @@ export default function App() {
       <Route path="/register/details" element={<RegisterStepTwo />} />
       <Route path="/dashboard/patient" element={<PatientDashboard />} />
       <Route path="/dashboard/patient/appointments" element={<MyAppointments />} />
+      {/* Add new route for patient consultation details */}
+      <Route path="/dashboard/patient/appointments/:id" element={<ConsultationDetails />} />
       <Route path="/dashboard/staff" element={<StaffDashboard />} />
       <Route path="/dashboard/staff/appointments" element={<StaffAppointments />} />
       <Route path="/dashboard/staff/schedules" element={<StaffSchedules />} />

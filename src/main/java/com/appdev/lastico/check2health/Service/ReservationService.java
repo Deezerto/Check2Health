@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import com.appdev.lastico.check2health.DTO.ConsultationDetailsDTO;
 import java.util.List;
 import java.util.Map;
 
@@ -127,5 +128,45 @@ public class ReservationService {
         }
 
         return reservationRepository.save(reservation);
+    }
+
+    // Method to retrieve detailed consultation information for a patient
+    public ConsultationDetailsDTO getConsultationDetails(Long reservationId) {
+        // Find the reservation by ID, or throw an exception if not found
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new EntityNotFoundException("Reservation not found with id: " + reservationId));
+
+        // Create a new DTO to hold the consultation details
+        ConsultationDetailsDTO dto = new ConsultationDetailsDTO();
+
+        // Populate Doctor's Name (e.g., "Dr. John Doe")
+        if (reservation.getDoctor() != null) {
+            dto.setDoctorName("Dr. " + reservation.getDoctor().getFirstName() + " " + reservation.getDoctor().getLastName());
+        } else {
+            // Handle cases where doctor might be null, though ideally it shouldn't be for a completed consultation
+            dto.setDoctorName("N/A");
+        }
+
+        // Populate Consultation Date
+        dto.setConsultationDate(reservation.getReservationDate());
+
+        // Populate Patient's Name
+        if (reservation.getPatient() != null) {
+            dto.setPatientName(reservation.getPatient().getFirstName() + " " + reservation.getPatient().getLastName());
+        } else {
+            // Handle cases where patient might be null, though ideally it shouldn't be
+            dto.setPatientName("N/A");
+        }
+
+        // Populate Reason for Visit
+        dto.setReasonForVisit(reservation.getReasonForVisit());
+
+        // Populate Doctor's Notes
+        dto.setDoctorNotes(reservation.getDoctorNotes());
+
+        // Populate Prescriptions (from postConsultationData, which is expected to contain JSON for prescriptions)
+        dto.setPrescriptions(reservation.getPostConsultationData());
+
+        return dto;
     }
 }
