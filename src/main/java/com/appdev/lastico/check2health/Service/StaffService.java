@@ -2,6 +2,7 @@ package com.appdev.lastico.check2health.Service;
 
 import com.appdev.lastico.check2health.Entity.Staff;
 import com.appdev.lastico.check2health.Repository.StaffRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,9 +16,11 @@ import static org.springframework.http.HttpStatus.*;
 public class StaffService {
 
     private final StaffRepository staffRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public StaffService(StaffRepository staffRepository) {
+    public StaffService(StaffRepository staffRepository, PasswordEncoder passwordEncoder) {
         this.staffRepository = staffRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -28,6 +31,7 @@ public class StaffService {
         if (staff.getUsername() != null && staffRepository.existsByUsernameIgnoreCase(staff.getUsername())) {
             throw new ResponseStatusException(CONFLICT, "Username already in use");
         }
+        staff.setPassword(passwordEncoder.encode(staff.getPassword()));
         return staffRepository.save(staff);
     }
 
@@ -47,7 +51,7 @@ public class StaffService {
         existing.setEmail(updated.getEmail());
         existing.setUsername(updated.getUsername());
         if (updated.getPassword() != null && !updated.getPassword().isBlank()) {
-            existing.setPassword(updated.getPassword());
+            existing.setPassword(passwordEncoder.encode(updated.getPassword()));
         }
         return existing;
     }

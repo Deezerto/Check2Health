@@ -7,15 +7,22 @@ import com.appdev.lastico.check2health.Entity.Staff;
 import com.appdev.lastico.check2health.Repository.DoctorRepository;
 import com.appdev.lastico.check2health.Repository.PatientRepository;
 import com.appdev.lastico.check2health.Repository.StaffRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+import static org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY;
 
 @Service
 public class AuthService {
@@ -23,15 +30,17 @@ public class AuthService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final StaffRepository staffRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AuthService(PatientRepository patientRepository, DoctorRepository doctorRepository,
-            StaffRepository staffRepository) {
+            StaffRepository staffRepository, PasswordEncoder passwordEncoder) {
         this.patientRepository = patientRepository;
         this.doctorRepository = doctorRepository;
         this.staffRepository = staffRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    public Map<String, Object> login(LoginRequest request) {
+    public Map<String, Object> login(LoginRequest request, HttpServletRequest httpServletRequest) {
         if (request == null || request.identifier() == null || request.password() == null) {
             throw new ResponseStatusException(BAD_REQUEST, "Missing credentials");
         }
@@ -42,9 +51,30 @@ public class AuthService {
                 .or(() -> patientRepository.findByEmailIgnoreCase(id));
 
         if (pOpt.isPresent()) {
-            // A patient account exists with this identifier. This check must be final.
             Patient patient = pOpt.get();
-            if (patient.getPassword() != null && patient.getPassword().equals(request.password())) {
+            boolean passwordMatches = false;
+            if (patient.getPassword() != null) {
+                if (passwordEncoder.matches(request.password(), patient.getPassword())) {
+                    passwordMatches = true;
+                } else if (patient.getPassword().equals(request.password())) {
+                    // Plaintext password matches, migrate to hashed password
+                    patient.setPassword(passwordEncoder.encode(request.password()));
+                    patientRepository.save(patient);
+                    passwordMatches = true;
+                }
+            }
+
+            if (passwordMatches) {
+                // Manually create a security context
+                List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_PATIENT"));
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(patient.getEmail(), null, authorities);
+                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+                securityContext.setAuthentication(authentication);
+                SecurityContextHolder.setContext(securityContext);
+                HttpSession session = httpServletRequest.getSession(true);
+                session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, securityContext);
+
+
                 // Patient found and password is correct.
                 Map<String, Object> response = new HashMap<>();
                 response.put("ok", true);
@@ -72,7 +102,28 @@ public class AuthService {
         Optional<Doctor> dOpt = doctorRepository.findByEmailIgnoreCase(id);
         if (dOpt.isPresent()) {
             Doctor doctor = dOpt.get();
-            if (doctor.getPassword() != null && doctor.getPassword().equals(request.password())) {
+            boolean passwordMatches = false;
+            if (doctor.getPassword() != null) {
+                if (passwordEncoder.matches(request.password(), doctor.getPassword())) {
+                    passwordMatches = true;
+                } else if (doctor.getPassword().equals(request.password())) {
+                    // Plaintext password matches, migrate to hashed password
+                    doctor.setPassword(passwordEncoder.encode(request.password()));
+                    doctorRepository.save(doctor);
+                    passwordMatches = true;
+                }
+            }
+
+            if (passwordMatches) {
+                 // Manually create a security context
+                List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_DOCTOR"));
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(doctor.getEmail(), null, authorities);
+                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+                securityContext.setAuthentication(authentication);
+                SecurityContextHolder.setContext(securityContext);
+                HttpSession session = httpServletRequest.getSession(true);
+                session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, securityContext);
+
                 return Map.of(
                         "ok", true,
                         "role", "DOCTOR",
@@ -91,10 +142,36 @@ public class AuthService {
         Optional<Staff> sOpt = staffRepository.findByEmailIgnoreCase(id);
         if (sOpt.isPresent()) {
             Staff staff = sOpt.get();
-            if (staff.getPassword() != null && staff.getPassword().equals(request.password())) {
+            boolean passwordMatches = false;
+            if (staff.getPassword() != null) {
+                if (passwordEncoder.matches(request.password(), staff.getPassword())) {
+                    passwordMatches = true;
+                } else if (staff.getPassword().equals(request.password())) {
+                    // Plaintext password matches, migrate to hashed password
+                    staff.setPassword(passwordEncoder.encode(request.password()));
+                    staffRepository.save(staff);
+                    passwordMatches = true;
+                }
+            }
+
+            if (passwordMatches) {
+                String role = "STAFF";
+                if ("admin@check2health.local".equalsIgnoreCase(staff.getEmail())) {
+                    role = "ADMIN";
+                }
+
+                // Manually create a security context
+                List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(staff.getEmail(), null, authorities);
+                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+                securityContext.setAuthentication(authentication);
+                SecurityContextHolder.setContext(securityContext);
+                HttpSession session = httpServletRequest.getSession(true);
+                session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, securityContext);
+                
                 return Map.of(
                         "ok", true,
-                        "role", "STAFF",
+                        "role", role,
                         "staffId", staff.getStaffID(),
                         "firstName", staff.getFirstName(),
                         "lastName", staff.getLastName(),
@@ -109,3 +186,4 @@ public class AuthService {
         throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
     }
 }
+

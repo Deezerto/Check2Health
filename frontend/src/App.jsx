@@ -15,6 +15,9 @@ import MyAppointments from './pages/MyAppointments'
 import AppointmentDetails from './pages/AppointmentDetails';
 import ConsultationForm from './pages/ConsultationForm';
 import ConsultationDetails from './pages/ConsultationDetails'; // Import the new component
+import RegisterDoctor from './pages/RegisterDoctor';
+import RegisterStaff from './pages/RegisterStaff';
+import ProtectedRoute from './components/ProtectedRoute';
 import './components/ProfileModal.css'
 import './styles/profile-extra.css'
 
@@ -30,10 +33,19 @@ export default function App() {
       <Route path="/dashboard/patient/appointments" element={<MyAppointments />} />
       {/* Add new route for patient consultation details */}
       <Route path="/dashboard/patient/appointments/:id" element={<ConsultationDetails />} />
+      
+      {/* Staff and Admin Routes */}
       <Route path="/dashboard/staff" element={<StaffDashboard />} />
       <Route path="/dashboard/staff/appointments" element={<StaffAppointments />} />
       <Route path="/dashboard/staff/schedules" element={<StaffSchedules />} />
       <Route path="/dashboard/staff/analytics" element={<StaffAnalytics />} />
+      
+      {/* Admin Only Routes */}
+      <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+        <Route path="/dashboard/staff/register-doctor" element={<RegisterDoctor />} />
+        <Route path="/dashboard/staff/register-staff" element={<RegisterStaff />} />
+      </Route>
+
       <Route path="/dashboard/doctor" element={<DoctorDashboard />} />
       <Route path="/dashboard/doctor/schedule" element={<DoctorSchedule />} />
       <Route path="/book-appointment" element={<BookAppointment />} />

@@ -37,7 +37,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody LoginRequest request) {
-        return authService.login(request);
+    public Map<String, Object> login(@RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpServletRequest) {
+        return authService.login(request, httpServletRequest);
     }
 }

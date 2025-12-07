@@ -4,7 +4,7 @@ import ApproveConfirmationModal from '../components/ApproveConfirmationModal'
 import RescheduleModal from '../components/RescheduleModal'
 import DenyConfirmationModal from '../components/DenyConfirmationModal'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export default function StaffDashboard() {
   const navigate = useNavigate()
@@ -17,6 +17,7 @@ export default function StaffDashboard() {
   const [pendingAppointments, setPendingAppointments] = useState([])
   const [stats, setStats] = useState({ pending: 0, confirmed: 0, patients: 0 })
   const [staffName, setStaffName] = useState('')
+  const [userRole, setUserRole] = useState(null)
   const [weeklyStats, setWeeklyStats] = useState([0, 0, 0, 0, 0, 0, 0])
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export default function StaffDashboard() {
     if (raw) {
       const user = JSON.parse(raw)
       setStaffName(`${user.firstName} ${user.lastName}`)
+      setUserRole(user.role)
     } else {
       navigate('/login')
     }
@@ -171,6 +173,20 @@ export default function StaffDashboard() {
             <div className="stat-label">Total Patients</div>
           </div>
         </div>
+
+        {userRole === 'ADMIN' && (
+          <section className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
+            <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Admin Controls</h2>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <Link to="/dashboard/staff/register-doctor" className="btn-primary" style={{ textDecoration: 'none' }}>
+                Register New Doctor
+              </Link>
+              <Link to="/dashboard/staff/register-staff" className="btn-primary" style={{ textDecoration: 'none' }}>
+                Register New Staff
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className="card table-card">
           <div className="table-title">Pending Approval Queue</div>
