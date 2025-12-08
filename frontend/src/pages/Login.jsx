@@ -83,7 +83,7 @@ export default function Login() {
                 <button type="button" className="input-action" onClick={() => setShow((s) => !s)}>{show ? 'Hide' : 'Show'}</button>
               </div>
               <div style={{marginTop:'4px',textAlign:'right',fontSize:'.8rem'}}>
-                <a href="#" style={{color:'#2563eb',textDecoration:'none'}}>Forgot Password?</a>
+                <Link to="/forgot-password" style={{color:'#2563eb',textDecoration:'none'}}>Forgot Password?</Link>
               </div>
             </label>
 

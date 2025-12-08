@@ -12,4 +12,5 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     Optional<Patient> findByUsernameIgnoreCase(String username);
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByUsernameIgnoreCase(String username);
+    Optional<Patient> findByResetPasswordToken(String resetPasswordToken);
 }

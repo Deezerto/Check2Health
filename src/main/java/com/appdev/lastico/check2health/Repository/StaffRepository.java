@@ -12,4 +12,5 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
     Optional<Staff> findByUsernameIgnoreCase(String username);
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByUsernameIgnoreCase(String username);
+    Optional<Staff> findByResetPasswordToken(String resetPasswordToken);
 }

@@ -1,9 +1,11 @@
 package com.appdev.lastico.check2health.Controller;
 
 import com.appdev.lastico.check2health.DTO.LoginRequest;
+import com.appdev.lastico.check2health.DTO.ResetPasswordRequest;
 import com.appdev.lastico.check2health.Entity.Patient;
 import com.appdev.lastico.check2health.Service.AuthService;
 import com.appdev.lastico.check2health.Service.PatientService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +39,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpServletRequest) {
+    public Map<String, Object> login(@RequestBody LoginRequest request, HttpServletRequest httpServletRequest) {
         return authService.login(request, httpServletRequest);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
+        authService.forgotPassword(body.get("email"));
+        return ResponseEntity.ok(Map.of("message", "If an account with this email exists, a password reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully."));
     }
 }

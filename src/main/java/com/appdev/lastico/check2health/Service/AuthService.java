@@ -31,13 +31,15 @@ public class AuthService {
     private final DoctorRepository doctorRepository;
     private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public AuthService(PatientRepository patientRepository, DoctorRepository doctorRepository,
-            StaffRepository staffRepository, PasswordEncoder passwordEncoder) {
+            StaffRepository staffRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.patientRepository = patientRepository;
         this.doctorRepository = doctorRepository;
         this.staffRepository = staffRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     public Map<String, Object> login(LoginRequest request, HttpServletRequest httpServletRequest) {
@@ -185,5 +187,83 @@ public class AuthService {
         // If we reach here, no user was found at all with the given identifier.
         throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
     }
-}
 
+    public void forgotPassword(String email) {
+        String token = UUID.randomUUID().toString();
+        Date expiryDate = new Date(System.currentTimeMillis() + 3600_000); // 1 hour
+
+        Optional<Patient> pOpt = patientRepository.findByEmailIgnoreCase(email);
+        if (pOpt.isPresent()) {
+            Patient patient = pOpt.get();
+            patient.setResetPasswordToken(token);
+            patient.setResetPasswordTokenExpiry(expiryDate);
+            patientRepository.save(patient);
+            emailService.sendPasswordResetEmail(patient.getEmail(), token);
+            return;
+        }
+
+        Optional<Doctor> dOpt = doctorRepository.findByEmailIgnoreCase(email);
+        if (dOpt.isPresent()) {
+            Doctor doctor = dOpt.get();
+            doctor.setResetPasswordToken(token);
+            doctor.setResetPasswordTokenExpiry(expiryDate);
+            doctorRepository.save(doctor);
+            emailService.sendPasswordResetEmail(doctor.getEmail(), token);
+            return;
+        }
+
+        Optional<Staff> sOpt = staffRepository.findByEmailIgnoreCase(email);
+        if (sOpt.isPresent()) {
+            Staff staff = sOpt.get();
+            staff.setResetPasswordToken(token);
+            staff.setResetPasswordTokenExpiry(expiryDate);
+            staffRepository.save(staff);
+            emailService.sendPasswordResetEmail(staff.getEmail(), token);
+        }
+
+        // We don't throw an error if the user is not found to prevent email enumeration.
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        Optional<Patient> pOpt = patientRepository.findByResetPasswordToken(token);
+        if (pOpt.isPresent()) {
+            Patient p = pOpt.get();
+            if (p.getResetPasswordTokenExpiry().before(new Date())) {
+                throw new ResponseStatusException(BAD_REQUEST, "Token has expired.");
+            }
+            p.setPassword(passwordEncoder.encode(newPassword));
+            p.setResetPasswordToken(null);
+            p.setResetPasswordTokenExpiry(null);
+            patientRepository.save(p);
+            return;
+        }
+
+        Optional<Doctor> dOpt = doctorRepository.findByResetPasswordToken(token);
+        if (dOpt.isPresent()) {
+            Doctor d = dOpt.get();
+            if (d.getResetPasswordTokenExpiry().before(new Date())) {
+                throw new ResponseStatusException(BAD_REQUEST, "Token has expired.");
+            }
+            d.setPassword(passwordEncoder.encode(newPassword));
+            d.setResetPasswordToken(null);
+            d.setResetPasswordTokenExpiry(null);
+            doctorRepository.save(d);
+            return;
+        }
+
+        Optional<Staff> sOpt = staffRepository.findByResetPasswordToken(token);
+        if (sOpt.isPresent()) {
+            Staff s = sOpt.get();
+            if (s.getResetPasswordTokenExpiry().before(new Date())) {
+                throw new ResponseStatusException(BAD_REQUEST, "Token has expired.");
+            }
+            s.setPassword(passwordEncoder.encode(newPassword));
+            s.setResetPasswordToken(null);
+            s.setResetPasswordTokenExpiry(null);
+            staffRepository.save(s);
+            return;
+        }
+
+        throw new ResponseStatusException(BAD_REQUEST, "Invalid token.");
+    }
+}

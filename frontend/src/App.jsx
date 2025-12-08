@@ -18,6 +18,8 @@ import ConsultationDetails from './pages/ConsultationDetails'; // Import the new
 import RegisterDoctor from './pages/RegisterDoctor';
 import RegisterStaff from './pages/RegisterStaff';
 import ProtectedRoute from './components/ProtectedRoute';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import './components/ProfileModal.css'
 import './styles/profile-extra.css'
 
@@ -27,6 +29,8 @@ export default function App() {
       {/* Home is the default landing page for unauthenticated users */}
       <Route index element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<RegisterStepOne />} />
       <Route path="/register/details" element={<RegisterStepTwo />} />
       <Route path="/dashboard/patient" element={<PatientDashboard />} />
