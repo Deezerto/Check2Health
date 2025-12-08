@@ -117,10 +117,10 @@ export default function DoctorSchedule() {
   weekEnd.setDate(weekEnd.getDate() + 6)
 
   return (
-    <div className="dash-bg" style={{ backgroundColor: '#E3F2FD', minHeight: '100vh' }}>
-      <DashboardNav active="My Schedule" items={["Dashboard", "My Schedule"]} role="DOCTOR" userName={user.name} />
+    <div className="dash-bg">
+      <DashboardNav active="My Schedule" items={["Dashboard", "My Schedule"]} role="DOCTOR" userName={`Dr. ${user.firstName || ''} ${user.lastName || ''}`} />
 
-      <main className="container dash-main" style={{ padding: '40px 20px', display: 'flex', justifyContent: 'center' }}>
+      <main className="container dash-main" style={{ display: 'flex', justifyContent: 'center' }}>
 
         <div className="card" style={{
           backgroundColor: '#fff',
