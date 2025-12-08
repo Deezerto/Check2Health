@@ -69,7 +69,6 @@ export default function DoctorDashboard() {
       <DashboardNav userName={`Dr. ${user?.firstName || ''} ${user?.lastName || ''}`} active="Dashboard" items={["Dashboard", "My Schedule"]} />
 
       <main className="container dash-main">
-        <div className="role-badge">Logged in as Doctor</div>
         <section className="card list-card">
           <div className="list-header">
             <h2>Today's Appointments</h2>

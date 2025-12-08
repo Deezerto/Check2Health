@@ -213,7 +213,7 @@ export default function RegisterStepTwo() {
         throw new Error(txt || 'Registration failed')
       }
       sessionStorage.removeItem('reg.step1')
-      navigate('/login')
+      navigate('/login', { state: { message: "Account successfully created" } })
     } catch(err){
       alert(err.message)
     }

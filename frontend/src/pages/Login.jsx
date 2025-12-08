@@ -1,11 +1,20 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 
 export default function Login() {
 
   const [show, setShow] = useState(false)
   const [error, setError] = useState("")
   const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    if (location.state?.message) {
+      alert(location.state.message)
+      // Clear state to prevent showing alert again on refresh (replace history)
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   const submit = async (e) => {
     e.preventDefault()
