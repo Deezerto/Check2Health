@@ -157,7 +157,19 @@ export default function StaffDashboard() {
       <DashboardNav userName={staffName} active="Dashboard" items={["Dashboard", "Manage Appointments", "Schedules", "Analytics"]} role="STAFF" />
 
       <main className="container dash-main">
-        <h1 className="dash-title">Welcome back, {staffName.split(' ')[0]}!</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem 0 1rem' }}>
+          <h1 className="dash-title" style={{ margin: 0 }}>Welcome back, {staffName.split(' ')[0]}!</h1>
+          {userRole === 'ADMIN' && (
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <Link to="/dashboard/staff/register-doctor" className="btn btn-blue" style={{ textDecoration: 'none' }}>
+                Register Doctor
+              </Link>
+              <Link to="/dashboard/staff/register-staff" className="btn btn-blue" style={{ textDecoration: 'none' }}>
+                Register Staff
+              </Link>
+            </div>
+          )}
+        </div>
 
         <div className="stat-row">
           <div className="stat-card">
@@ -173,20 +185,6 @@ export default function StaffDashboard() {
             <div className="stat-label">Total Patients</div>
           </div>
         </div>
-
-        {userRole === 'ADMIN' && (
-          <section className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Admin Controls</h2>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <Link to="/dashboard/staff/register-doctor" className="btn-primary" style={{ textDecoration: 'none' }}>
-                Register New Doctor
-              </Link>
-              <Link to="/dashboard/staff/register-staff" className="btn-primary" style={{ textDecoration: 'none' }}>
-                Register New Staff
-              </Link>
-            </div>
-          </section>
-        )}
 
         <section className="card table-card">
           <div className="table-title">Pending Approval Queue</div>

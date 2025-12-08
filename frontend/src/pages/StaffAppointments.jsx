@@ -71,7 +71,7 @@ export default function StaffAppointments() {
         else {
             try {
                 const user = JSON.parse(raw);
-                if (user.role !== 'STAFF') {
+                if (user.role !== 'STAFF' && user.role !== 'ADMIN') {
                     navigate('/login');
                 } else {
                     setStaffName(`${user.firstName} ${user.lastName}`)
