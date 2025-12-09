@@ -1,0 +1,199 @@
+/* AiConciergeWidget.css */
+
+/* Floating Action Button (FAB) */
+.ai-widget-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: #007bff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-size: 30px;
+    border: none;
+    outline: none;
+}
+
+.ai-widget-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal Overlay */
+.ai-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Dimmed background */
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+/* Modal Content */
+.ai-modal-content {
+    background-color: #ffffff;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.ai-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.ai-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.ai-close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #64748b;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* Body States */
+.ai-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ai-instruction-text {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+.ai-input-area {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.ai-input-area:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+
+.ai-primary-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-primary-btn:hover {
+    background-color: #0056b3;
+}
+
+.ai-primary-btn:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.ai-secondary-btn {
+    background-color: transparent;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.ai-secondary-btn:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
+/* Recommendation State */
+.ai-recommendation-result {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.ai-result-label {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.ai-result-role {
+    font-size: 24px;
+    font-weight: 800;
+    color: #007bff;
+}
+
+.ai-loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #ffffff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
