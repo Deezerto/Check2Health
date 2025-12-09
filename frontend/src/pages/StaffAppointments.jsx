@@ -119,7 +119,7 @@ export default function StaffAppointments() {
     const filteredAppointments = appointments.filter(apt => {
         const matchName = apt.name.toLowerCase().includes(searchName.toLowerCase())
         
-        const matchDoctor = selectedDoctor === '' || (apt.raw.doctor && apt.raw.doctor.doctorID.toString() === selectedDoctor)
+        const matchDoctor = selectedDoctor === '' || (apt.raw.doctor && apt.raw.doctor.doctorId.toString() === selectedDoctor)
         
         const matchStatus = selectedStatus === '' || apt.status.toLowerCase() === selectedStatus.toLowerCase()
         
