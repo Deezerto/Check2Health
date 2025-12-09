@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardNav from '../components/DashboardNav'
+import AiConciergeWidget from '../components/AiConciergeWidget'
 
 export default function BookAppointment() {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ export default function BookAppointment() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedDoctor, setSelectedDoctor] = useState('')
   const [doctors, setDoctors] = useState([])
+  const [filteredDoctors, setFilteredDoctors] = useState([])
   const [allSchedules, setAllSchedules] = useState([])
   const [availabilitySlots, setAvailabilitySlots] = useState({ morning: [], afternoon: [], evening: [] })
   const [selectedSlot, setSelectedSlot] = useState(null)
@@ -60,11 +62,13 @@ export default function BookAppointment() {
             uniqueDoctors.push({
               id: s.doctor.doctorId,
               firstName: s.doctor.firstName,
-              lastName: s.doctor.lastName
+              lastName: s.doctor.lastName,
+              medicalRole: s.doctor.medicalRole
             });
           }
         });
         setDoctors(uniqueDoctors);
+        setFilteredDoctors(uniqueDoctors);
         if (uniqueDoctors.length > 0) {
           setSelectedDoctor(uniqueDoctors[0].id);
         }
@@ -262,6 +266,31 @@ export default function BookAppointment() {
     }))
   }
 
+  const handleAiFilter = (role, symptom) => {
+    // 1. Auto-fill the "Reason for Visit" (Bonus Feature)
+    setFormData(prev => ({ ...prev, reasonForVisit: symptom }));
+
+    // 2. Filter doctors based on the recommended role
+    if (!role) return;
+
+    // Normalize for comparison (assuming role is like "Cardiologist")
+    const targetRole = role.toLowerCase();
+
+    const matching = doctors.filter(d =>
+      d.medicalRole && d.medicalRole.toLowerCase().includes(targetRole)
+    );
+
+    if (matching.length > 0) {
+      setFilteredDoctors(matching);
+      setSelectedDoctor(matching[0].id);
+    } else {
+      // Logic: If no exact match, stay on all doctors but maybe alert?
+      // Or just filter to empty? Better to show all and alert.
+      alert(`No doctors found for role: ${role}. Showing all available doctors.`);
+      setFilteredDoctors(doctors);
+    }
+  }
+
   const goToStep2 = () => {
     if (!selectedSlot) {
       alert('Please select a time slot first')
@@ -391,7 +420,7 @@ export default function BookAppointment() {
                             value={selectedDoctor}
                             onChange={(e) => setSelectedDoctor(e.target.value)}
                           >
-                            {doctors.map(d => (
+                            {filteredDoctors.map(d => (
                               <option key={d.id} value={d.id}>Dr. {d.firstName} {d.lastName}</option>
                             ))}
                           </select>
@@ -682,6 +711,8 @@ export default function BookAppointment() {
           )}
         </div>
       </main>
+
+      <AiConciergeWidget onApplyFilter={handleAiFilter} />
     </div>
   )
 }
