@@ -64,6 +64,14 @@ export default function StaffAppointments() {
 
     const [appointments, setAppointments] = useState([])
     const [staffName, setStaffName] = useState('')
+    
+    // Filter States
+    const [doctors, setDoctors] = useState([])
+    const [searchName, setSearchName] = useState('')
+    const [selectedDoctor, setSelectedDoctor] = useState('')
+    const [selectedStatus, setSelectedStatus] = useState('')
+    const [startDate, setStartDate] = useState('')
+    const [endDate, setEndDate] = useState('')
 
     useEffect(() => {
         const raw = sessionStorage.getItem('auth.user')
@@ -81,6 +89,13 @@ export default function StaffAppointments() {
             }
         }
 
+        // Fetch Doctors
+        fetch('/api/doctors')
+            .then(res => res.json())
+            .then(data => setDoctors(data))
+            .catch(err => console.error('Failed to fetch doctors:', err))
+
+        // Fetch Reservations
         fetch('/api/reservations')
             .then(res => res.json())
             .then(data => {
@@ -99,6 +114,32 @@ export default function StaffAppointments() {
             })
             .catch(err => console.error('Failed to fetch appointments:', err))
     }, [navigate])
+
+    // Filter Logic
+    const filteredAppointments = appointments.filter(apt => {
+        const matchName = apt.name.toLowerCase().includes(searchName.toLowerCase())
+        
+        const matchDoctor = selectedDoctor === '' || (apt.raw.doctor && apt.raw.doctor.doctorID.toString() === selectedDoctor)
+        
+        const matchStatus = selectedStatus === '' || apt.status.toLowerCase() === selectedStatus.toLowerCase()
+        
+        let matchDate = true
+        const aptDate = new Date(apt.raw.reservationDate)
+        
+        if (startDate) {
+            const start = new Date(startDate)
+            start.setHours(0, 0, 0, 0)
+            matchDate = matchDate && aptDate >= start
+        }
+        
+        if (endDate) {
+            const end = new Date(endDate)
+            end.setHours(23, 59, 59, 999)
+            matchDate = matchDate && aptDate <= end
+        }
+
+        return matchName && matchDoctor && matchStatus && matchDate
+    })
 
     const handleAction = (action) => {
         console.log('Action:', action, 'on', selectedAppointment)
@@ -305,19 +346,41 @@ export default function StaffAppointments() {
                             type="text"
                             className="input"
                             placeholder="Patient Name"
+                            value={searchName}
+                            onChange={(e) => setSearchName(e.target.value)}
                             style={{ backgroundColor: '#fff', borderColor: '#e2e8f0' }}
                         />
 
                         <div className="select-wrapper" style={{ position: 'relative' }}>
-                            <select className="input" style={{ backgroundColor: '#fff', borderColor: '#e2e8f0', appearance: 'none' }}>
-                                <option>All Doctors</option>
+                            <select 
+                                className="input" 
+                                value={selectedDoctor}
+                                onChange={(e) => setSelectedDoctor(e.target.value)}
+                                style={{ backgroundColor: '#fff', borderColor: '#e2e8f0', appearance: 'none' }}
+                            >
+                                <option value="">All Doctors</option>
+                                {doctors.map(doc => (
+                                    <option key={doc.doctorId} value={doc.doctorId}>
+                                        Dr. {doc.firstName} {doc.lastName}
+                                    </option>
+                                ))}
                             </select>
                             <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>▼</span>
                         </div>
 
                         <div className="select-wrapper" style={{ position: 'relative' }}>
-                            <select className="input" style={{ backgroundColor: '#fff', borderColor: '#e2e8f0', appearance: 'none' }}>
-                                <option>All Statuses</option>
+                            <select 
+                                className="input" 
+                                value={selectedStatus}
+                                onChange={(e) => setSelectedStatus(e.target.value)}
+                                style={{ backgroundColor: '#fff', borderColor: '#e2e8f0', appearance: 'none' }}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Rescheduled">Rescheduled</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Completed">Completed</option>
                             </select>
                             <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>▼</span>
                         </div>
@@ -327,6 +390,8 @@ export default function StaffAppointments() {
                                 type="text"
                                 className="input"
                                 placeholder="Start Date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
                                 onFocus={(e) => e.target.type = 'date'}
                                 onBlur={(e) => e.target.type = 'text'}
                                 style={{ backgroundColor: '#fff', borderColor: '#e2e8f0' }}
@@ -339,6 +404,8 @@ export default function StaffAppointments() {
                                 type="text"
                                 className="input"
                                 placeholder="End Date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
                                 onFocus={(e) => e.target.type = 'date'}
                                 onBlur={(e) => e.target.type = 'text'}
                                 style={{ backgroundColor: '#fff', borderColor: '#e2e8f0' }}
@@ -361,12 +428,12 @@ export default function StaffAppointments() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {appointments.length === 0 ? (
+                                {filteredAppointments.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No appointments found.</td>
                                     </tr>
                                 ) : (
-                                    appointments.map((apt, i) => (
+                                    filteredAppointments.map((apt, i) => (
                                         <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
                                             <td style={{ padding: '16px', color: '#000', fontWeight: 500 }}>{apt.name}</td>
                                             <td style={{ padding: '16px', color: '#000' }}>{apt.doctor}</td>
