@@ -84,7 +84,7 @@ export default function AppointmentDetails() {
   // Formatting data for display
   const patient = appointment.patient;
   const patientName = patient ? `${patient.firstName} ${patient.lastName}` : "N/A";
-  const dob = patient ? new Date(patient.birthdate).toLocaleDateString() : "N/A";
+  const dob = patient ? new Date(patient.dateOfBirth).toLocaleDateString() : "N/A";
   
   // Use parsed data with fallbacks
   const knownAllergies = preconData.knownAllergies || "None specified";

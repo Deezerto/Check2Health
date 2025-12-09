@@ -1,6 +1,6 @@
 import DashboardNav from '../components/DashboardNav'
 import { useMemo, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 function useUserName() {
   return useMemo(() => {
@@ -437,8 +437,8 @@ export default function PatientDashboard() {
               <span style={{ opacity: 0.7, fontSize: '18px', marginLeft: '10px' }}>||</span>
             </button>
 
-            <a
-              href="#"
+            <Link
+              to="/dashboard/patient/appointments"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -462,7 +462,7 @@ export default function PatientDashboard() {
             >
               <span>Upcoming Appointment</span>
               <span style={{ opacity: 0.7, fontSize: '18px', marginLeft: '10px' }}>||</span>
-            </a>
+            </Link>
           </aside>
         </div>
       </main>
