@@ -28,11 +28,15 @@ public class DoctorScheduleService {
     }
 
     public List<DoctorSchedule> getByDoctor(long doctorId, java.time.LocalDate weekStart) {
+        Doctor doctor = doctorRepository.findById(doctorId).orElse(null);
+        if (doctor == null)
+            return new ArrayList<>();
+
         if (weekStart == null) {
-            return doctorScheduleRepository.findByDoctor_DoctorID(doctorId);
+            return doctorScheduleRepository.findByDoctor(doctor);
         }
         java.time.LocalDate weekEnd = weekStart.plusDays(6);
-        return doctorScheduleRepository.findByDoctor_DoctorIDAndSpecificDateBetween(doctorId, weekStart, weekEnd);
+        return doctorScheduleRepository.findByDoctorAndSpecificDateBetween(doctor, weekStart, weekEnd);
     }
 
     @Transactional
@@ -46,7 +50,7 @@ public class DoctorScheduleService {
         if (weekStart != null) {
             java.time.LocalDate weekEnd = weekStart.plusDays(6);
             List<DoctorSchedule> existing = doctorScheduleRepository
-                    .findByDoctor_DoctorIDAndSpecificDateBetween(doctorId, weekStart, weekEnd);
+                    .findByDoctorAndSpecificDateBetween(doctor, weekStart, weekEnd);
 
             for (ScheduleDto dto : week) {
                 String day = normalize(dto.dayOfWeek());
@@ -80,7 +84,9 @@ public class DoctorScheduleService {
             for (ScheduleDto dto : week) {
                 String day = normalize(dto.dayOfWeek());
                 DoctorSchedule s = doctorScheduleRepository
-                        .findByDoctor_DoctorIDAndDayOfWeekIgnoreCase(doctorId, day)
+                        .findByDoctorAndDayOfWeekIgnoreCase(doctor, day)
+                        .stream()
+                        .findFirst()
                         .orElseGet(() -> {
                             DoctorSchedule n = new DoctorSchedule();
                             n.setDoctor(doctor);

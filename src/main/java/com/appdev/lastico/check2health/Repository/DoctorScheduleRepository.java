@@ -4,13 +4,13 @@ import com.appdev.lastico.check2health.Entity.DoctorSchedule;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface DoctorScheduleRepository extends JpaRepository<DoctorSchedule, Long> {
-    List<DoctorSchedule> findByDoctor_DoctorID(Long doctorId);
+    List<DoctorSchedule> findByDoctor(com.appdev.lastico.check2health.Entity.Doctor doctor);
 
-    Optional<DoctorSchedule> findByDoctor_DoctorIDAndDayOfWeekIgnoreCase(Long doctorId, String dayOfWeek);
+    List<DoctorSchedule> findByDoctorAndDayOfWeekIgnoreCase(com.appdev.lastico.check2health.Entity.Doctor doctor,
+            String dayOfWeek);
 
-    List<DoctorSchedule> findByDoctor_DoctorIDAndSpecificDateBetween(Long doctorId, java.time.LocalDate start,
-            java.time.LocalDate end);
+    List<DoctorSchedule> findByDoctorAndSpecificDateBetween(com.appdev.lastico.check2health.Entity.Doctor doctor,
+            java.time.LocalDate start, java.time.LocalDate end);
 }
