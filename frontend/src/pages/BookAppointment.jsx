@@ -19,6 +19,7 @@ export default function BookAppointment() {
   const [allSchedules, setAllSchedules] = useState([])
   const [availabilitySlots, setAvailabilitySlots] = useState({ morning: [], afternoon: [], evening: [] })
   const [selectedSlot, setSelectedSlot] = useState(null)
+  const [bookedSlots, setBookedSlots] = useState([]) // New state for booked slots
 
   // Form Data State
   const [formData, setFormData] = useState({
@@ -76,6 +77,26 @@ export default function BookAppointment() {
       .catch(() => { })
   }, [])
 
+  // Fetch Booked Slots
+  useEffect(() => {
+    if (!selectedDoctor) {
+      setBookedSlots([])
+      return
+    }
+
+    fetch(`/api/reservations/doctor/${selectedDoctor}`)
+      .then(res => res.json())
+      .then(data => {
+        // Store booked dates for this doctor
+        // Filter out Cancelled/Denied
+        const booked = data
+          .filter(r => r.reservationStatus !== 'Cancelled' && r.reservationStatus !== 'Denied')
+          .map(r => r.reservationDate) // Keep as is (ISO string usually)
+        setBookedSlots(booked)
+      })
+      .catch(() => setBookedSlots([]))
+  }, [selectedDoctor])
+
   // Calendar Helpers
   const getDaysInMonth = (date) => {
     const year = date.getFullYear()
@@ -97,6 +118,12 @@ export default function BookAppointment() {
 
   const hasAvailability = (date) => {
     if (!date || !selectedDoctor) return false
+
+    // Check if past date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return false;
+
     const dateStr = date.toLocaleDateString('en-CA') // YYYY-MM-DD
     const dayOfWeek = date.toLocaleString('en-US', { weekday: 'long' }).toUpperCase()
 
@@ -169,9 +196,9 @@ export default function BookAppointment() {
     const [startH, startM] = startStr.split(':').map(Number)
     const [endH, endM] = endStr.split(':').map(Number)
 
-    let current = new Date()
+    let current = new Date(selectedDate)
     current.setHours(startH, startM, 0, 0)
-    const end = new Date()
+    const end = new Date(selectedDate)
     end.setHours(endH, endM, 0, 0)
 
     const morning = []
@@ -185,15 +212,38 @@ export default function BookAppointment() {
       const h12 = h % 12 || 12
       const timeStr = `${h12}:${String(m).padStart(2, '0')} ${ampm}`
 
-      if (h < 12) morning.push(timeStr)
-      else if (h < 17) afternoon.push(timeStr)
-      else evening.push(timeStr)
+      // Check against booked slots
+      // Construct date string for comparison: YYYY-MM-DDTHH:mm:ss
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+      const hh = String(current.getHours()).padStart(2, '0');
+      const mm = String(current.getMinutes()).padStart(2, '0');
+      const slotIso = `${year}-${month}-${day}T${hh}:${mm}:00`;
+
+      // 1. Check if past
+      const now = new Date();
+      if (current < now) {
+        current.setMinutes(current.getMinutes() + 30);
+        continue;
+      }
+
+      // 2. Check if this specific slot is in bookedSlots
+      const isBooked = bookedSlots.some(bookedDate => {
+        return bookedDate.startsWith(slotIso)
+      })
+
+      if (!isBooked) {
+        if (h < 12) morning.push(timeStr)
+        else if (h < 17) afternoon.push(timeStr)
+        else evening.push(timeStr)
+      }
 
       current.setMinutes(current.getMinutes() + 30)
     }
 
     setAvailabilitySlots({ morning, afternoon, evening })
-  }, [selectedDoctor, selectedDate, allSchedules])
+  }, [selectedDoctor, selectedDate, allSchedules, bookedSlots])
 
   const changeMonth = (offset) => {
     const newDate = new Date(currentDate)
@@ -458,17 +508,23 @@ export default function BookAppointment() {
                             const isTodayDate = isSameDate(date, new Date())
                             const available = hasAvailability(date)
 
+                            // Check if past for disabling
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const isPast = date < today;
+
                             return (
                               <div
                                 key={i}
-                                onClick={() => setSelectedDate(date)}
+                                onClick={() => !isPast && setSelectedDate(date)}
                                 style={{
                                   display: 'flex',
                                   flexDirection: 'column',
                                   alignItems: 'center',
-                                  cursor: 'pointer',
+                                  cursor: isPast ? 'default' : 'pointer',
                                   position: 'relative',
-                                  padding: '2px'
+                                  padding: '2px',
+                                  opacity: isPast ? 0.4 : 1
                                 }}
                               >
                                 <div style={{
@@ -579,136 +635,141 @@ export default function BookAppointment() {
                   </button>
                 </div>
               </div>
-            </div>
-          )}
+            </div >
+          )
+          }
 
           {/* Step 2: Pre-Consultation Survey */}
-          {step === 2 && (
-            <div className="booking-card">
-              <div className="booking-header">
-                <h2>Pre-Consultation Survey</h2>
-                <p>Please provide your information to help us prepare your visit</p>
-              </div>
-
-              <div className="booking-body survey-form">
-                <label className="form-label">
-                  Reason for Visit <span style={{ color: 'red' }}>*</span>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="e.g. Annual Check-up, Sore throat"
-                    value={formData.reasonForVisit}
-                    onChange={e => setFormData({ ...formData, reasonForVisit: e.target.value })}
-                  />
-                </label>
-
-                <div className="form-label">
-                  Current Symptoms <span style={{ color: 'red' }}>*</span>
-                  <div className="symptom-grid">
-                    {['Fever', 'Cough', 'Headache', 'Dizziness', 'Muscle Ache', 'Back Pain', 'Shortness of Breath', 'Colds', 'Fatigue', 'Vomiting', 'Sore Throat', 'Stomach Ache', 'No Symptoms', 'Others'].map(symptom => (
-                      <button
-                        key={symptom}
-                        type="button"
-                        className={`symptom-btn ${formData.currentSymptoms.includes(symptom) ? 'selected' : ''}`}
-                        onClick={() => handleSymptomToggle(symptom)}
-                      >
-                        {symptom}
-                      </button>
-                    ))}
-                  </div>
+          {
+            step === 2 && (
+              <div className="booking-card">
+                <div className="booking-header">
+                  <h2>Pre-Consultation Survey</h2>
+                  <p>Please provide your information to help us prepare your visit</p>
                 </div>
 
-                <label className="form-label">
-                  Detailed Description <span style={{ color: 'red' }}>*</span>
-                  <textarea
-                    className="input"
-                    rows="4"
-                    placeholder="Please describe what you feel in detail"
-                    value={formData.detailedDescription}
-                    onChange={e => setFormData({ ...formData, detailedDescription: e.target.value })}
-                  />
-                </label>
-
-                <label className="form-label">
-                  Medical History <span style={{ color: 'red' }}>*</span>
-                  <textarea
-                    className="input"
-                    rows="3"
-                    placeholder="e.g., High Blood Pressure, Asthma"
-                    value={formData.medicalHistory}
-                    onChange={e => setFormData({ ...formData, medicalHistory: e.target.value })}
-                  />
-                </label>
-
-                <div className="form-row">
+                <div className="booking-body survey-form">
                   <label className="form-label">
-                    Known Allergies <span style={{ color: 'red' }}>*</span>
+                    Reason for Visit <span style={{ color: 'red' }}>*</span>
                     <input
                       type="text"
                       className="input"
-                      placeholder="e.g., Peanuts, Shellfish, Shrimp"
-                      value={formData.knownAllergies}
-                      onChange={e => setFormData({ ...formData, knownAllergies: e.target.value })}
+                      placeholder="e.g. Annual Check-up, Sore throat"
+                      value={formData.reasonForVisit}
+                      onChange={e => setFormData({ ...formData, reasonForVisit: e.target.value })}
                     />
                   </label>
 
-                  <label className="form-label">
-                    Current Medications <span style={{ color: 'red' }}>*</span>
-                    <input
-                      type="text"
-                      className="input"
-                      placeholder="e.g., Lisinopril 10mg, Tylenol"
-                      value={formData.currentMedications}
-                      onChange={e => setFormData({ ...formData, currentMedications: e.target.value })}
-                    />
-                  </label>
-                </div>
-
-                <div className="booking-actions">
-                  <button className="btn btn-gray" onClick={() => setStep(1)}>Back</button>
-                  <button className="btn btn-blue" onClick={goToStep3}>Next: Review Booking</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Confirm */}
-          {step === 3 && (
-            <div className="booking-card">
-              <div className="booking-header">
-                <h2>Confirm Your Appointment</h2>
-                <p>Please check your appointment details</p>
-              </div>
-
-              <div className="booking-body confirm-view">
-                <div className="confirm-grid">
-                  <div className="confirm-row">
-                    <div className="confirm-label">What</div>
-                    <div className="confirm-value">{formData.reasonForVisit}</div>
-                  </div>
-                  <div className="confirm-row">
-                    <div className="confirm-label">When</div>
-                    <div className="confirm-value">
-                      {selectedSlot?.dateLabel} at {selectedSlot?.selectedTime}
+                  <div className="form-label">
+                    Current Symptoms <span style={{ color: 'red' }}>*</span>
+                    <div className="symptom-grid">
+                      {['Fever', 'Cough', 'Headache', 'Dizziness', 'Muscle Ache', 'Back Pain', 'Shortness of Breath', 'Colds', 'Fatigue', 'Vomiting', 'Sore Throat', 'Stomach Ache', 'No Symptoms', 'Others'].map(symptom => (
+                        <button
+                          key={symptom}
+                          type="button"
+                          className={`symptom-btn ${formData.currentSymptoms.includes(symptom) ? 'selected' : ''}`}
+                          onClick={() => handleSymptomToggle(symptom)}
+                        >
+                          {symptom}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <div className="confirm-row">
-                    <div className="confirm-label">Who</div>
-                    <div className="confirm-value">{selectedSlot?.doctorFullName}</div>
-                  </div>
-                  <div className="confirm-row">
-                    <div className="confirm-label">Where</div>
-                    <div className="confirm-value">CITU Clinic</div>
-                  </div>
-                </div>
 
-                <div className="booking-actions">
-                  <button className="btn btn-gray" onClick={() => setStep(2)}>Back</button>
-                  <button className="btn btn-blue" onClick={confirmBooking}>Confirm Booking</button>
+                  <label className="form-label">
+                    Detailed Description <span style={{ color: 'red' }}>*</span>
+                    <textarea
+                      className="input"
+                      rows="4"
+                      placeholder="Please describe what you feel in detail"
+                      value={formData.detailedDescription}
+                      onChange={e => setFormData({ ...formData, detailedDescription: e.target.value })}
+                    />
+                  </label>
+
+                  <label className="form-label">
+                    Medical History <span style={{ color: 'red' }}>*</span>
+                    <textarea
+                      className="input"
+                      rows="3"
+                      placeholder="e.g., High Blood Pressure, Asthma"
+                      value={formData.medicalHistory}
+                      onChange={e => setFormData({ ...formData, medicalHistory: e.target.value })}
+                    />
+                  </label>
+
+                  <div className="form-row">
+                    <label className="form-label">
+                      Known Allergies <span style={{ color: 'red' }}>*</span>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="e.g., Peanuts, Shellfish, Shrimp"
+                        value={formData.knownAllergies}
+                        onChange={e => setFormData({ ...formData, knownAllergies: e.target.value })}
+                      />
+                    </label>
+
+                    <label className="form-label">
+                      Current Medications <span style={{ color: 'red' }}>*</span>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="e.g., Lisinopril 10mg, Tylenol"
+                        value={formData.currentMedications}
+                        onChange={e => setFormData({ ...formData, currentMedications: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="booking-actions">
+                    <button className="btn btn-gray" onClick={() => setStep(1)}>Back</button>
+                    <button className="btn btn-blue" onClick={goToStep3}>Next: Review Booking</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
+
+          {/* Step 3: Confirm */}
+          {
+            step === 3 && (
+              <div className="booking-card">
+                <div className="booking-header">
+                  <h2>Confirm Your Appointment</h2>
+                  <p>Please check your appointment details</p>
+                </div>
+
+                <div className="booking-body confirm-view">
+                  <div className="confirm-grid">
+                    <div className="confirm-row">
+                      <div className="confirm-label">What</div>
+                      <div className="confirm-value">{formData.reasonForVisit}</div>
+                    </div>
+                    <div className="confirm-row">
+                      <div className="confirm-label">When</div>
+                      <div className="confirm-value">
+                        {selectedSlot?.dateLabel} at {selectedSlot?.selectedTime}
+                      </div>
+                    </div>
+                    <div className="confirm-row">
+                      <div className="confirm-label">Who</div>
+                      <div className="confirm-value">{selectedSlot?.doctorFullName}</div>
+                    </div>
+                    <div className="confirm-row">
+                      <div className="confirm-label">Where</div>
+                      <div className="confirm-value">CITU Clinic</div>
+                    </div>
+                  </div>
+
+                  <div className="booking-actions">
+                    <button className="btn btn-gray" onClick={() => setStep(2)}>Back</button>
+                    <button className="btn btn-blue" onClick={confirmBooking}>Confirm Booking</button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
         </div>
       </main>
 

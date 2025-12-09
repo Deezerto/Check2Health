@@ -13,6 +13,7 @@ export default function RescheduleModal({ appointment, open, onClose, onConfirm 
     // Slots
     const [availableTimes, setAvailableTimes] = useState([]);
     const [selectedTime, setSelectedTime] = useState('');
+    const [bookedSlots, setBookedSlots] = useState([]); // New state
 
     useEffect(() => {
         if (open) {
@@ -39,6 +40,25 @@ export default function RescheduleModal({ appointment, open, onClose, onConfirm 
         }
     }, [open, appointment]);
 
+    // Fetch Booked Slots
+    useEffect(() => {
+        if (!selectedDoctorId) {
+            setBookedSlots([]);
+            return;
+        }
+
+        fetch(`/api/reservations/doctor/${selectedDoctorId}`)
+            .then(res => res.json())
+            .then(data => {
+                // Filter out Cancelled/Denied
+                const booked = data
+                    .filter(r => r.reservationStatus !== 'Cancelled' && r.reservationStatus !== 'Denied')
+                    .map(r => r.reservationDate);
+                setBookedSlots(booked);
+            })
+            .catch(() => setBookedSlots([]));
+    }, [selectedDoctorId]);
+
     // --- Helpers ---
     const getDaysInMonth = (date) => {
         const year = date.getFullYear();
@@ -60,6 +80,12 @@ export default function RescheduleModal({ appointment, open, onClose, onConfirm 
 
     const hasAvailability = (date) => {
         if (!date || !selectedDoctorId) return false;
+
+        // Check if past date
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (date < today) return false;
+
         const dateStr = date.toLocaleDateString('en-CA'); // YYYY-MM-DD
         const dayOfWeek = date.toLocaleString('en-US', { weekday: 'long' }).toUpperCase();
 
@@ -126,9 +152,9 @@ export default function RescheduleModal({ appointment, open, onClose, onConfirm 
         const [startH, startM] = startStr.split(':').map(Number);
         const [endH, endM] = endStr.split(':').map(Number);
 
-        let current = new Date();
+        let current = new Date(selectedDate);
         current.setHours(startH, startM, 0, 0);
-        const end = new Date();
+        const end = new Date(selectedDate);
         end.setHours(endH, endM, 0, 0);
 
         const slots = [];
@@ -138,12 +164,33 @@ export default function RescheduleModal({ appointment, open, onClose, onConfirm 
             const ampm = h >= 12 ? 'PM' : 'AM';
             const h12 = h % 12 || 12;
             const timeStr = `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-            slots.push(timeStr);
+
+            // Check filtering
+            const year = current.getFullYear();
+            const month = String(current.getMonth() + 1).padStart(2, '0');
+            const day = String(current.getDate()).padStart(2, '0');
+            const hh = String(current.getHours()).padStart(2, '0');
+            const mm = String(current.getMinutes()).padStart(2, '0');
+            const slotIso = `${year}-${month}-${day}T${hh}:${mm}:00`;
+
+            // 1. Check Past
+            const now = new Date();
+            if (current < now) {
+                current.setMinutes(current.getMinutes() + 30);
+                continue;
+            }
+
+            const isBooked = bookedSlots.some(bookedDate => bookedDate.startsWith(slotIso));
+
+            if (!isBooked) {
+                slots.push(timeStr);
+            }
+
             current.setMinutes(current.getMinutes() + 30);
         }
         setAvailableTimes(slots);
         setSelectedTime(''); // Reset time selection
-    }, [selectedDoctorId, selectedDate, allSchedules]);
+    }, [selectedDoctorId, selectedDate, allSchedules, bookedSlots]);
 
 
     const handleConfirm = () => {
@@ -283,16 +330,21 @@ export default function RescheduleModal({ appointment, open, onClose, onConfirm 
                                     const isSelected = isSameDate(date, selectedDate);
                                     const isToday = isSameDate(date, new Date());
 
+                                    // Check if past
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const isPast = date < today;
+
                                     return (
                                         <div
                                             key={i}
-                                            onClick={() => available && setSelectedDate(date)}
+                                            onClick={() => !isPast && available && setSelectedDate(date)}
                                             style={{
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
-                                                cursor: available ? 'pointer' : 'default',
-                                                opacity: available ? 1 : 0.4
+                                                cursor: (available && !isPast) ? 'pointer' : 'default',
+                                                opacity: (available && !isPast) ? 1 : 0.4
                                             }}
                                         >
                                             <div style={{
@@ -364,5 +416,6 @@ export default function RescheduleModal({ appointment, open, onClose, onConfirm 
                 </div>
             </div>
         </div>
+
     );
 }

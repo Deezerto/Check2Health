@@ -26,6 +26,7 @@ export default function PatientDashboard() {
   const [doctors, setDoctors] = useState([])
   const [allSchedules, setAllSchedules] = useState([])
   const [availabilitySlots, setAvailabilitySlots] = useState({ morning: [], afternoon: [], evening: [] })
+  const [bookedSlots, setBookedSlots] = useState([]) // New state
 
   // Initial Data Fetch
   useEffect(() => {
@@ -58,6 +59,26 @@ export default function PatientDashboard() {
       .catch(() => { })
   }, [navigate])
 
+  // Fetch Booked Slots
+  useEffect(() => {
+    if (!selectedDoctor) {
+      setBookedSlots([])
+      return
+    }
+
+    fetch(`/api/reservations/doctor/${selectedDoctor}`)
+      .then(res => res.json())
+      .then(data => {
+        // Store booked dates for this doctor
+        // Filter out Cancelled/Denied
+        const booked = data
+          .filter(r => r.reservationStatus !== 'Cancelled' && r.reservationStatus !== 'Denied')
+          .map(r => r.reservationDate) // Keep as is (ISO string usually)
+        setBookedSlots(booked)
+      })
+      .catch(() => setBookedSlots([]))
+  }, [selectedDoctor])
+
   // Calendar Helpers
   const getDaysInMonth = (date) => {
     const year = date.getFullYear()
@@ -84,6 +105,12 @@ export default function PatientDashboard() {
 
   const hasAvailability = (date) => {
     if (!date || !selectedDoctor) return false
+
+    // Check if past date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return false;
+
     const dateStr = date.toLocaleDateString('en-CA') // YYYY-MM-DD
     const dayOfWeek = date.toLocaleString('en-US', { weekday: 'long' }).toUpperCase()
 
@@ -154,10 +181,10 @@ export default function PatientDashboard() {
     const [startH, startM] = startStr.split(':').map(Number)
     const [endH, endM] = endStr.split(':').map(Number)
 
-    let current = new Date()
+    let current = new Date(selectedDate)
     current.setHours(startH, startM, 0, 0)
 
-    const end = new Date()
+    const end = new Date(selectedDate)
     end.setHours(endH, endM, 0, 0)
 
     const morning = []
@@ -171,16 +198,36 @@ export default function PatientDashboard() {
       const h12 = h % 12 || 12
       const timeStr = `${h12}:${String(m).padStart(2, '0')} ${ampm}`
 
-      if (h < 12) morning.push(timeStr)
-      else if (h < 17) afternoon.push(timeStr) // 12 PM to 4:59 PM
-      else evening.push(timeStr) // 5 PM onwards
+      // Check filters
+      // 1. Past
+      const now = new Date()
+      if (current < now) {
+        current.setMinutes(current.getMinutes() + 30)
+        continue
+      }
+
+      // 2. Booked
+      const year = current.getFullYear()
+      const month = String(current.getMonth() + 1).padStart(2, '0')
+      const day = String(current.getDate()).padStart(2, '0')
+      const hh = String(current.getHours()).padStart(2, '0')
+      const mm = String(current.getMinutes()).padStart(2, '0')
+      const slotIso = `${year}-${month}-${day}T${hh}:${mm}:00`
+
+      const isBooked = bookedSlots.some(bookedDate => bookedDate.startsWith(slotIso))
+
+      if (!isBooked) {
+        if (h < 12) morning.push(timeStr)
+        else if (h < 17) afternoon.push(timeStr) // 12 PM to 4:59 PM
+        else evening.push(timeStr) // 5 PM onwards
+      }
 
       current.setMinutes(current.getMinutes() + 30)
     }
 
     setAvailabilitySlots({ morning, afternoon, evening })
 
-  }, [selectedDoctor, selectedDate, allSchedules])
+  }, [selectedDoctor, selectedDate, allSchedules, bookedSlots])
 
   const calendarDays = getDaysInMonth(currentDate)
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
@@ -271,17 +318,23 @@ export default function PatientDashboard() {
                       const isTodayDate = isSameDate(date, new Date())
                       const available = hasAvailability(date)
 
+                      // Check if past for disabling
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const isPast = date < today;
+
                       return (
                         <div
                           key={i}
-                          onClick={() => setSelectedDate(date)}
+                          onClick={() => !isPast && setSelectedDate(date)}
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            cursor: 'pointer',
+                            cursor: isPast ? 'default' : 'pointer',
                             position: 'relative',
-                            padding: '5px'
+                            padding: '5px',
+                            opacity: isPast ? 0.4 : 1
                           }}
                         >
                           <div style={{
