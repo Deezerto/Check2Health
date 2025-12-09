@@ -8,6 +8,7 @@ export default function StaffAnalytics() {
     const [doctors, setDoctors] = useState([]);
     const [staffName, setStaffName] = useState('');
     const [loading, setLoading] = useState(true);
+    const [selectedDoctor, setSelectedDoctor] = useState('');
 
     useEffect(() => {
         const raw = sessionStorage.getItem('auth.user');
@@ -40,15 +41,20 @@ export default function StaffAnalytics() {
 
     // --- Data Processing ---
 
+    const filteredReservations = useMemo(() => {
+        if (!selectedDoctor) return reservations;
+        return reservations.filter(r => r.doctor && String(r.doctor.doctorId) === String(selectedDoctor));
+    }, [reservations, selectedDoctor]);
+
     // 1. Status Distribution
     const statusData = useMemo(() => {
-        const counts = { CONFIRMED: 0, COMPLETED: 0, CANCELLED: 0, PENDING: 0 };
-        reservations.forEach(r => {
+        const counts = { CONFIRMED: 0, COMPLETED: 0, CANCELLED: 0, PENDING: 0, RESCHEDULED: 0 };
+        filteredReservations.forEach(r => {
             const s = (r.reservationStatus || '').toUpperCase();
             if (counts[s] !== undefined) counts[s]++;
             else counts[s] = (counts[s] || 0) + 1;
         });
-        const total = reservations.length || 1; // avoid div by 0
+        const total = filteredReservations.length || 1; // avoid div by 0
         return {
             counts,
             total,
@@ -56,12 +62,13 @@ export default function StaffAnalytics() {
                 CONFIRMED: (counts.CONFIRMED / total) * 100,
                 COMPLETED: (counts.COMPLETED / total) * 100,
                 CANCELLED: (counts.CANCELLED / total) * 100,
-                PENDING: (counts.PENDING / total) * 100
+                PENDING: (counts.PENDING / total) * 100,
+                RESCHEDULED: (counts.RESCHEDULED / total) * 100
             }
         };
-    }, [reservations]);
+    }, [filteredReservations]);
 
-    // 2. Booking by Doctor
+    // 2. Booking by Doctor (Uses all reservations, unaffected by filter)
     const doctorStats = useMemo(() => {
         const map = {};
         reservations.forEach(r => {
@@ -84,12 +91,12 @@ export default function StaffAnalytics() {
         }
 
         const counts = days.map(dateStr => {
-            return reservations.filter(r => r.reservationDate.startsWith(dateStr)).length;
+            return filteredReservations.filter(r => r.reservationDate.startsWith(dateStr)).length;
         });
 
         const max = Math.max(...counts, 5); // min max is 5
         return { days, counts, max };
-    }, [reservations]);
+    }, [filteredReservations]);
 
     // --- Chart Helpers ---
 
@@ -148,9 +155,14 @@ export default function StaffAnalytics() {
                             <div>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#000', marginBottom: '8px' }}>Filter by Doctor</label>
                                 <div className="select-wrapper" style={{ position: 'relative' }}>
-                                    <select className="input" style={{
-                                        padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#fff', width: '220px', appearance: 'none', height: '42px', boxSizing: 'border-box'
-                                    }}>
+                                    <select 
+                                        className="input" 
+                                        value={selectedDoctor}
+                                        onChange={(e) => setSelectedDoctor(e.target.value)}
+                                        style={{
+                                            padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#fff', width: '220px', appearance: 'none', height: '42px', boxSizing: 'border-box'
+                                        }}
+                                    >
                                         <option value="">All Doctors</option>
                                         {doctors.map(d => (
                                             <option key={d.doctorId} value={d.doctorId}>Dr. {d.firstName} {d.lastName}</option>
@@ -287,6 +299,10 @@ export default function StaffAnalytics() {
                                     <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="#f59e0b" strokeWidth="6"
                                         strokeDasharray={`${statusData.percentages.PENDING} 100`} strokeDashoffset={`-${statusData.percentages.CONFIRMED + statusData.percentages.COMPLETED + statusData.percentages.CANCELLED}`} />
 
+                                    {/* Rescheduled - Purple */}
+                                    <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="#8b5cf6" strokeWidth="6"
+                                        strokeDasharray={`${statusData.percentages.RESCHEDULED} 100`} strokeDashoffset={`-${statusData.percentages.CONFIRMED + statusData.percentages.COMPLETED + statusData.percentages.CANCELLED + statusData.percentages.PENDING}`} />
+
                                 </svg>
                                 {/* Center Text */}
                                 <div style={{
@@ -315,6 +331,10 @@ export default function StaffAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
                                     <div style={{ width: '10px', height: '10px', backgroundColor: '#f59e0b', borderRadius: '50%', marginRight: '6px' }}></div>
                                     <span style={{ fontSize: '13px', color: '#495057' }}>Pending ({Math.round(statusData.percentages.PENDING)}%)</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                    <div style={{ width: '10px', height: '10px', backgroundColor: '#8b5cf6', borderRadius: '50%', marginRight: '6px' }}></div>
+                                    <span style={{ fontSize: '13px', color: '#495057' }}>Rescheduled ({Math.round(statusData.percentages.RESCHEDULED)}%)</span>
                                 </div>
                             </div>
 

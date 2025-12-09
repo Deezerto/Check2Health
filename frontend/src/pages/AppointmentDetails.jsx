@@ -94,6 +94,13 @@ export default function AppointmentDetails() {
   const detailedDescription = preconData.detailedDescription || "No detailed description provided.";
   // --- END OF MODIFIED SECTION ---
 
+  const isToday = () => {
+    if (!appointment || !appointment.reservationDate) return false;
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const aptDateStr = appointment.reservationDate.split('T')[0];
+    return todayStr === aptDateStr;
+  };
+
   return (
     <div className="app-details-page">
       <DashboardNav 
@@ -151,8 +158,14 @@ export default function AppointmentDetails() {
             </div>
           </div>
 
-          <div className="action-footer">
-            <button className="btn-begin" onClick={handleBeginConsultation}>
+          <div className="action-footer" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button 
+              className="btn-begin" 
+              onClick={handleBeginConsultation}
+              disabled={!isToday()}
+              style={{ opacity: isToday() ? 1 : 0.5, cursor: isToday() ? 'pointer' : 'not-allowed' }}
+              title={!isToday() ? "Consultation can only be started on the day of the appointment." : ""}
+            >
               Begin Consultation
             </button>
           </div>

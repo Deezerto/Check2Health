@@ -41,8 +41,37 @@ export default function ConsultationDetails() {
   }, [id]); // Rerun effect if ID changes
 
   const handleDownload = () => {
-    alert("Downloading prescription PDF...");
-    // Logic to generate/download PDF goes here
+    if (!prescriptions || prescriptions.length === 0) {
+      alert("No prescriptions to download.");
+      return;
+    }
+
+    // CSV Header
+    const headers = ["Medication Name", "Dosage", "Instructions"];
+    
+    // Map data to CSV rows, escaping quotes if necessary
+    const rows = prescriptions.map(p => [
+      `"${(p.medicationName || '').replace(/"/g, '""')}"`,
+      `"${(p.dosage || '').replace(/"/g, '""')}"`,
+      `"${(p.instructions || '').replace(/"/g, '""')}"`
+    ]);
+
+    // Combine header and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => r.join(","))
+    ].join("\n");
+
+    // Create Blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `prescription_${id}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (loading) {

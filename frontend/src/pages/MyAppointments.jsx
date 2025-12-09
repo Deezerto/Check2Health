@@ -47,6 +47,7 @@ function getStatusBadgeClass(status) {
   if (normalized === 'PENDING') return 'badge-pending';
   if (normalized === 'COMPLETED') return 'badge-completed'; // Let's assume a style for this
   if (normalized === 'CANCELLED') return 'badge-cancelled';
+  if (normalized === 'RESCHEDULED') return 'badge-pending'; // Reusing pending style for now, or could be a new one
   return 'badge-pending';
 }
 
@@ -56,6 +57,7 @@ function getStatusLabel(status) {
   if (normalized === 'PENDING') return 'Pending';
   if (normalized === 'COMPLETED') return 'Completed';
   if (normalized === 'CANCELLED') return 'Cancelled';
+  if (normalized === 'RESCHEDULED') return 'Rescheduled';
   return status;
 }
 
@@ -101,7 +103,9 @@ export default function MyAppointments() {
 
   // --- REFACTORED: Filter logic based on status ---
   const upcoming = appointments.filter(a =>
-    a.reservationStatus?.toUpperCase() === 'PENDING' || a.reservationStatus?.toUpperCase() === 'CONFIRMED'
+    a.reservationStatus?.toUpperCase() === 'PENDING' || 
+    a.reservationStatus?.toUpperCase() === 'CONFIRMED' ||
+    a.reservationStatus?.toUpperCase() === 'RESCHEDULED'
   );
 
   const past = appointments.filter(a =>
