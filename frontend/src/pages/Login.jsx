@@ -32,14 +32,24 @@ export default function Login() {
       })
       if (!res.ok) {
         let msg = 'Login failed'
-        try {
-          const data = await res.json()
-          msg = data.message || data.error || msg
-        } catch {
-          const txt = await res.text()
-          if (txt && txt.length < 200) msg = txt
+        const contentType = res.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const data = await res.json()
+            msg = data.message || data.error || msg
+          } catch {
+            // ignore json parse error
+          }
+        } else {
+          try {
+            const txt = await res.text()
+            if (txt && txt.length < 200) msg = txt
+          } catch {
+            // ignore text read error
+          }
         }
-        if (msg.includes('Invalid credentials')) msg = 'Invalid email/username or password.'
+        
+        if (msg.includes('Invalid credentials') || msg === 'Unauthorized') msg = 'Invalid email/username or password.'
         setError(msg)
         return
       }
