@@ -58,11 +58,6 @@ public class AuthService {
             if (patient.getPassword() != null) {
                 if (passwordEncoder.matches(request.password(), patient.getPassword())) {
                     passwordMatches = true;
-                } else if (patient.getPassword().equals(request.password())) {
-                    // Plaintext password matches, migrate to hashed password
-                    patient.setPassword(passwordEncoder.encode(request.password()));
-                    patientRepository.save(patient);
-                    passwordMatches = true;
                 }
             }
 
@@ -108,11 +103,6 @@ public class AuthService {
             if (doctor.getPassword() != null) {
                 if (passwordEncoder.matches(request.password(), doctor.getPassword())) {
                     passwordMatches = true;
-                } else if (doctor.getPassword().equals(request.password())) {
-                    // Plaintext password matches, migrate to hashed password
-                    doctor.setPassword(passwordEncoder.encode(request.password()));
-                    doctorRepository.save(doctor);
-                    passwordMatches = true;
                 }
             }
 
@@ -147,11 +137,6 @@ public class AuthService {
             boolean passwordMatches = false;
             if (staff.getPassword() != null) {
                 if (passwordEncoder.matches(request.password(), staff.getPassword())) {
-                    passwordMatches = true;
-                } else if (staff.getPassword().equals(request.password())) {
-                    // Plaintext password matches, migrate to hashed password
-                    staff.setPassword(passwordEncoder.encode(request.password()));
-                    staffRepository.save(staff);
                     passwordMatches = true;
                 }
             }
