@@ -24,7 +24,7 @@ Java Spring Boot app for pre-consultation and reservation. This guide shows how 
    - Username: `root` (or your MySQL user)
    - Click **Test Connection**, enter your password, then **OK**
 
-4. **Create the database and user:**
+4. **Create the database and user**
    - Open the connection, then run these SQL commands:
 
 ```sql
@@ -33,10 +33,11 @@ CREATE USER IF NOT EXISTS 'c2h_user'@'%' IDENTIFIED BY 'StrongPass123!';
 GRANT ALL PRIVILEGES ON check2health.* TO 'c2h_user'@'%';
 FLUSH PRIVILEGES;
 ```
+	- Creating a new user is optional, you can use root if you want to.
 
 5. **Update `src/main/resources/application.properties`** with your credentials:
    - If using `root`: keep `username=root` and set your root password
-   - If using the new user: set `username=c2h_user` and `password=StrongPass123!`
+   - If using the new user (see step 4): set `username=c2h_user` and `password=StrongPass123!`
 
 6. **Verify the setup:**
    - Run the Spring Boot app (see Build and Run below)
@@ -100,37 +101,6 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. Assets (logo/images) belong in `frontend/public/assets/`.
-## API Quickstart (Patients)
-
-Endpoints are rooted at `/api/patients`.
-
-```powershell
-# Create
-curl -Method Post -Uri http://localhost:8080/api/patients `
-	-ContentType "application/json" `
-	-Body '{
-		"firstName":"Ana",
-		"lastName":"Santos",
-		"email":"ana@example.com",
-		"username":"ana",
-		"password":"Password1!",
-		"phoneNumber":"+63 912 345 6789"
-	}'
-
-# List
-curl http://localhost:8080/api/patients
-
-# Get by id
-curl http://localhost:8080/api/patients/1
-
-# Update
-curl -Method Put -Uri http://localhost:8080/api/patients/1 `
-	-ContentType "application/json" `
-	-Body '{"firstName":"Ana","lastName":"Cruz"}'
-
-# Delete
-curl -Method Delete -Uri http://localhost:8080/api/patients/1
-```
 
 ## Project Structure (key parts)
 
