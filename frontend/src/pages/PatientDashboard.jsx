@@ -1,23 +1,19 @@
 import DashboardNav from '../components/DashboardNav'
 import { useMemo, useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-
-function useUserName() {
-  return useMemo(() => {
-    try {
-      const raw = sessionStorage.getItem('auth.user')
-      if (!raw) return { full: 'User', first: 'User' }
-      const u = JSON.parse(raw)
-      const full = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.username || 'User'
-      const first = (u.firstName || full || 'User').toString()
-      return { full, first }
-    } catch { return { full: 'User', first: 'User' } }
-  }, [])
-}
+import { useAuth } from '../context/AuthContext'
+import api from '../api'
 
 export default function PatientDashboard() {
   const navigate = useNavigate()
-  const { full, first } = useUserName()
+  const { user, loading } = useAuth()
+
+  const { full, first } = useMemo(() => {
+    if (!user) return { full: 'User', first: 'User' }
+    const full = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'User'
+    const first = (user.firstName || full || 'User').toString()
+    return { full, first }
+  }, [user])
 
   // State
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -30,11 +26,14 @@ export default function PatientDashboard() {
 
   // Initial Data Fetch
   useEffect(() => {
-    const raw = sessionStorage.getItem('auth.user')
-    if (!raw) navigate('/login')
+    if (loading) return
+    if (!user) {
+      navigate('/login')
+      return
+    }
 
-    fetch('/api/schedules')
-      .then(r => r.ok ? r.json() : [])
+    api.get('/schedules')
+      .then(r => r.data)
       .then(list => {
         setAllSchedules(list)
 
@@ -57,7 +56,7 @@ export default function PatientDashboard() {
         }
       })
       .catch(() => { })
-  }, [navigate])
+  }, [navigate, user, loading])
 
   // Fetch Booked Slots
   useEffect(() => {
@@ -66,8 +65,8 @@ export default function PatientDashboard() {
       return
     }
 
-    fetch(`/api/reservations/doctor/${selectedDoctor}`)
-      .then(res => res.json())
+    api.get(`/reservations/doctor/${selectedDoctor}`)
+      .then(res => res.data)
       .then(data => {
         // Store booked dates for this doctor
         // Filter out Cancelled/Denied

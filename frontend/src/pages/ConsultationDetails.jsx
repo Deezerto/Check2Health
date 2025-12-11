@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import DashboardNav from '../components/DashboardNav'; // Corrected path
+import { useAuth } from '../context/AuthContext';
 
 // --- Helper function to parse prescriptions safely ---
 const parsePrescriptions = (jsonString) => {
-    if (!jsonString) return [];
-    try {
-        const parsed = JSON.parse(jsonString);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-        console.error("Failed to parse prescriptions JSON:", error);
-        return [];
-    }
+  if (!jsonString) return [];
+  try {
+    const parsed = JSON.parse(jsonString);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error("Failed to parse prescriptions JSON:", error);
+    return [];
+  }
 };
 
 export default function ConsultationDetails() {
@@ -19,6 +20,14 @@ export default function ConsultationDetails() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [authLoading, user, navigate]);
 
   useEffect(() => {
     const fetchConsultationDetails = async () => {
@@ -48,7 +57,7 @@ export default function ConsultationDetails() {
 
     // CSV Header
     const headers = ["Medication Name", "Dosage", "Instructions"];
-    
+
     // Map data to CSV rows, escaping quotes if necessary
     const rows = prescriptions.map(p => [
       `"${(p.medicationName || '').replace(/"/g, '""')}"`,
@@ -76,19 +85,19 @@ export default function ConsultationDetails() {
 
   if (loading) {
     return (
-        <div style={styles.pageContainer}>
-            <DashboardNav active="My Appointments" items={['Dashboard', 'My Appointments']} role="PATIENT" />
-            <main style={styles.mainContent}><h2 style={styles.pageTitle}>Loading Consultation Details...</h2></main>
-        </div>
+      <div style={styles.pageContainer}>
+        <DashboardNav active="My Appointments" items={['Dashboard', 'My Appointments']} role="PATIENT" />
+        <main style={styles.mainContent}><h2 style={styles.pageTitle}>Loading Consultation Details...</h2></main>
+      </div>
     );
   }
 
   if (error) {
     return (
-        <div style={styles.pageContainer}>
-            <DashboardNav active="My Appointments" items={['Dashboard', 'My Appointments']} role="PATIENT" />
-            <main style={styles.mainContent}><h2 style={styles.pageTitle}>Error: {error}</h2></main>
-        </div>
+      <div style={styles.pageContainer}>
+        <DashboardNav active="My Appointments" items={['Dashboard', 'My Appointments']} role="PATIENT" />
+        <main style={styles.mainContent}><h2 style={styles.pageTitle}>Error: {error}</h2></main>
+      </div>
     );
   }
 
@@ -100,16 +109,16 @@ export default function ConsultationDetails() {
   return (
     <div style={styles.pageContainer}>
       {/* 1. Header Integration */}
-      <DashboardNav 
-        userName={data.patientName} 
-        active="My Appointments" 
-        items={['Dashboard', 'My Appointments']} 
-        role="PATIENT" 
+      <DashboardNav
+        userName={data.patientName}
+        active="My Appointments"
+        items={['Dashboard', 'My Appointments']}
+        role="PATIENT"
       />
 
       <main style={styles.mainContent}>
         <div className="container" style={styles.innerContainer}>
-          
+
           {/* 2. Breadcrumb / Back Link */}
           <div style={styles.breadcrumb}>
             <Link to="/dashboard/patient/appointments?tab=past" style={styles.backLink}>
@@ -144,7 +153,7 @@ export default function ConsultationDetails() {
               <div style={styles.notesBox}>
                 {(data.doctorNotes || "").split('\n').map((line, index) => (
                   <p key={index} style={styles.noteParagraph}>
-                    {line || <br/>}
+                    {line || <br />}
                   </p>
                 ))}
               </div>
@@ -175,9 +184,9 @@ export default function ConsultationDetails() {
               ) : (
                 <p>No prescriptions for this consultation.</p>
               )}
-              
+
               <div style={styles.actionArea}>
-                <button 
+                <button
                   onClick={handleDownload}
                   style={styles.downloadBtn}
                   onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}

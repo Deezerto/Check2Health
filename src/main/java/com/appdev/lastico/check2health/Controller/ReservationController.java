@@ -3,6 +3,7 @@ package com.appdev.lastico.check2health.Controller;
 import com.appdev.lastico.check2health.DTO.ConsultationDetailsDTO;
 import com.appdev.lastico.check2health.Entity.Reservation;
 import com.appdev.lastico.check2health.Service.ReservationService;
+import com.appdev.lastico.check2health.Utility.SanitizationUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -16,13 +17,18 @@ import java.util.Map;
 public class ReservationController {
 
     private final ReservationService reservationService;
+    private final SanitizationUtil sanitizationUtil;
 
-    public ReservationController(ReservationService reservationService) {
+    public ReservationController(ReservationService reservationService, SanitizationUtil sanitizationUtil) {
         this.reservationService = reservationService;
+        this.sanitizationUtil = sanitizationUtil;
     }
 
     @PostMapping
     public ResponseEntity<Reservation> create(@RequestBody Map<String, Object> payload) {
+        // Sanitize string inputs (XSS prevention)
+        payload.replaceAll((k, v) -> v instanceof String ? sanitizationUtil.sanitize((String) v) : v);
+
         try {
             Reservation saved = reservationService.createFromPayload(payload);
             URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -79,13 +85,15 @@ public class ReservationController {
     }
 
     @PatchMapping("/{id}/consultation")
-    public ResponseEntity<Reservation> updateConsultation(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
-        String doctorNotes = (String) payload.get("doctorNotes");
-        String postConsultationData = (String) payload.get("postConsultationData");
+    public ResponseEntity<Reservation> updateConsultation(@PathVariable Long id,
+            @RequestBody Map<String, Object> payload) {
+        String doctorNotes = sanitizationUtil.sanitize((String) payload.get("doctorNotes"));
+        String postConsultationData = sanitizationUtil.sanitize((String) payload.get("postConsultationData"));
         String status = (String) payload.get("reservationStatus");
 
         try {
-            Reservation updatedReservation = reservationService.updateConsultation(id, doctorNotes, postConsultationData, status);
+            Reservation updatedReservation = reservationService.updateConsultation(id, doctorNotes,
+                    postConsultationData, status);
             return ResponseEntity.ok(updatedReservation);
         } catch (jakarta.persistence.EntityNotFoundException e) {
             return ResponseEntity.notFound().build();

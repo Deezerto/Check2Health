@@ -5,6 +5,7 @@ import RescheduleModal from '../components/RescheduleModal'
 import DenyConfirmationModal from '../components/DenyConfirmationModal'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function StaffDashboard() {
   const navigate = useNavigate()
@@ -13,23 +14,25 @@ export default function StaffDashboard() {
   const [approveConfirmationOpen, setApproveConfirmationOpen] = useState(false)
   const [rescheduleOpen, setRescheduleOpen] = useState(false)
   const [denyConfirmationOpen, setDenyConfirmationOpen] = useState(false)
-  
+
   const [pendingAppointments, setPendingAppointments] = useState([])
   const [stats, setStats] = useState({ pending: 0, confirmed: 0, patients: 0 })
   const [staffName, setStaffName] = useState('')
   const [userRole, setUserRole] = useState(null)
   const [weeklyStats, setWeeklyStats] = useState([0, 0, 0, 0, 0, 0, 0])
 
+  const { user, loading } = useAuth() // Use AuthContext instead of sessionStorage
+
   useEffect(() => {
-    const raw = sessionStorage.getItem('auth.user')
-    if (raw) {
-      const user = JSON.parse(raw)
-      setStaffName(`${user.firstName} ${user.lastName}`)
-      setUserRole(user.role)
-    } else {
-      navigate('/login')
+    if (!loading) {
+      if (user && (user.role === 'STAFF' || user.role === 'ADMIN')) {
+        setStaffName(`${user.firstName} ${user.lastName}`)
+        setUserRole(user.role)
+      } else {
+        navigate('/login')
+      }
     }
-  }, [navigate])
+  }, [user, loading, navigate])
 
   useEffect(() => {
     Promise.all([
@@ -49,11 +52,11 @@ export default function StaffDashboard() {
         id: r.reservationID,
         name: `${r.patient.firstName} ${r.patient.lastName}`,
         doctor: `Dr. ${r.doctor.firstName} ${r.doctor.lastName}`,
-        dt: new Date(r.reservationDate).toLocaleString('en-US', { 
-          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true 
+        dt: new Date(r.reservationDate).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true
         }),
         reason: r.reasonForVisit,
-        raw: r 
+        raw: r
       }))
       setPendingAppointments(formatted)
 
@@ -77,7 +80,7 @@ export default function StaffDashboard() {
       const d = new Date(r.reservationDate)
       const diffTime = d.getTime() - monday.getTime()
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-      
+
       if (diffDays >= 0 && diffDays < 7) {
         counts[diffDays]++
       }
@@ -114,18 +117,18 @@ export default function StaffDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'CONFIRMED' })
     })
-    .then(res => {
-      if (res.ok) {
-        setPendingAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id))
-        setStats(prev => ({
-          ...prev,
-          pending: prev.pending - 1,
-          confirmed: prev.confirmed + 1
-        }))
-        handleCloseAll()
-      }
-    })
-    .catch(err => console.error('Failed to approve:', err))
+      .then(res => {
+        if (res.ok) {
+          setPendingAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id))
+          setStats(prev => ({
+            ...prev,
+            pending: prev.pending - 1,
+            confirmed: prev.confirmed + 1
+          }))
+          handleCloseAll()
+        }
+      })
+      .catch(err => console.error('Failed to approve:', err))
   }
 
   const confirmDeny = () => {
@@ -136,17 +139,54 @@ export default function StaffDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'CANCELLED' })
     })
-    .then(res => {
-      if (res.ok) {
-        setPendingAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id))
-        setStats(prev => ({
-          ...prev,
-          pending: prev.pending - 1
-        }))
-        handleCloseAll()
-      }
-    })
-    .catch(err => console.error('Failed to deny:', err))
+      .then(res => {
+        if (res.ok) {
+          setPendingAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id))
+          setStats(prev => ({
+            ...prev,
+            pending: prev.pending - 1
+          }))
+          handleCloseAll()
+        }
+      })
+      .catch(err => console.error('Failed to deny:', err))
+  }
+
+  const confirmReschedule = (doctorId, dateTime) => {
+    if (!selectedAppointment) return
+
+    // Fetch the doctor object first to ensure we have the correct data for the PUT request
+    fetch(`/api/doctors/${doctorId}`)
+      .then(res => res.json())
+      .then(doctor => {
+        const payload = {
+          ...selectedAppointment.raw,
+          reservationDate: dateTime,
+          reservationStatus: 'RESCHEDULED',
+          doctor: doctor
+        }
+
+        return fetch(`/api/reservations/${selectedAppointment.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      })
+      .then(res => {
+        if (res && res.ok) {
+          // Update UI: Remove from pending list as it is now RESCHEDULED
+          setPendingAppointments(prev => prev.filter(a => a.id !== selectedAppointment.id))
+          setStats(prev => ({
+            ...prev,
+            pending: prev.pending - 1
+          }))
+          handleCloseAll()
+          alert('Appointment successfully rescheduled.')
+        } else {
+          alert('Failed to reschedule appointment.')
+        }
+      })
+      .catch(err => console.error('Failed to reschedule:', err))
   }
 
   // Calculate max for chart scaling
@@ -202,7 +242,7 @@ export default function StaffDashboard() {
               <tbody>
                 {pendingAppointments.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{textAlign: 'center', padding: '2rem', color: '#64748b'}}>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
                       No pending appointments found.
                     </td>
                   </tr>
@@ -247,14 +287,14 @@ export default function StaffDashboard() {
           <div className="chart-title">Bookings This Week</div>
           <div className="bar-chart">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => {
-               const count = weeklyStats[i]
-               const height = (count / maxStat) * 100
-               return (
+              const count = weeklyStats[i]
+              const height = (count / maxStat) * 100
+              return (
                 <div key={d} className="bar">
                   <div className="bar-fill" style={{ height: `${Math.max(height, 5)}%` }} title={`${count} bookings`}></div>
                   <span className="bar-label">{d}</span>
                 </div>
-               )
+              )
             })}
           </div>
         </section>
@@ -284,7 +324,7 @@ export default function StaffDashboard() {
           setRescheduleOpen(false)
           setPendingModalOpen(true)
         }}
-        onConfirm={handleCloseAll}
+        onConfirm={confirmReschedule}
       />
 
       <DenyConfirmationModal

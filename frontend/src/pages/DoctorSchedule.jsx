@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import DashboardNav from '../components/DashboardNav'
 import WheelTimePicker from '../components/WheelTimePicker'
@@ -8,6 +9,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 export default function DoctorSchedule() {
   const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
   const [rows, setRows] = useState(DAYS.map(d => ({ dayOfWeek: d, active: false, startTime: '09:00', endTime: '17:00' })))
 
   // Initialize to the Monday of the current week
@@ -20,9 +22,7 @@ export default function DoctorSchedule() {
     return monday
   })
 
-  const user = useMemo(() => {
-    try { return JSON.parse(sessionStorage.getItem('auth.user') || '{}') } catch { return {} }
-  }, [])
+  // Removed manual sessionStorage parsing
 
   const formatDate = (date) => {
     // Use 'en-CA' to get YYYY-MM-DD format in local time
@@ -52,9 +52,10 @@ export default function DoctorSchedule() {
   }
 
   useEffect(() => {
+    if (authLoading) return
     if (!user || user.role !== 'DOCTOR') { navigate('/login'); return }
     fetchSchedule(currentWeekStart)
-  }, [navigate, user, currentWeekStart])
+  }, [navigate, user, authLoading, currentWeekStart])
 
   const update = (idx, patch) => setRows(r => r.map((row, i) => i === idx ? { ...row, ...patch } : row))
 

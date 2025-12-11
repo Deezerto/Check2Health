@@ -1,30 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import DashboardNav from "../components/DashboardNav";
+import { useAuth } from "../context/AuthContext";
 import "../components/AppointmentDetails.css"; // Assuming this CSS file exists and is styled
 
 export default function AppointmentDetails() {
   const navigate = useNavigate();
   const { id } = useParams(); // Gets the appointment ID from the URL
-  
+
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
+  const { user, loading: authLoading } = useAuth();
 
-  // Effect to get the logged-in user from session storage
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('auth.user');
-      if (raw) {
-        setUser(JSON.parse(raw));
-      } else {
-        navigate('/login');
-      }
-    } catch {
+    if (!authLoading && !user) {
       navigate('/login');
     }
-  }, [navigate]);
+  }, [user, authLoading, navigate]);
 
   // Effect to fetch appointment details from the backend
   useEffect(() => {
@@ -63,7 +56,7 @@ export default function AppointmentDetails() {
   if (error) {
     return <div className="error-screen">Error: {error}</div>;
   }
-  
+
   if (!appointment) {
     return <div className="error-screen">Appointment not found.</div>;
   }
@@ -85,7 +78,7 @@ export default function AppointmentDetails() {
   const patient = appointment.patient;
   const patientName = patient ? `${patient.firstName} ${patient.lastName}` : "N/A";
   const dob = patient ? new Date(patient.dateOfBirth).toLocaleDateString() : "N/A";
-  
+
   // Use parsed data with fallbacks
   const knownAllergies = preconData.knownAllergies || "None specified";
   const currentMedications = preconData.currentMedications || "None specified";
@@ -103,15 +96,15 @@ export default function AppointmentDetails() {
 
   return (
     <div className="app-details-page">
-      <DashboardNav 
+      <DashboardNav
         userName={`Dr. ${user?.firstName || ''} ${user?.lastName || ''}`}
-        active="Dashboard" 
-        items={['Dashboard', 'My Schedule']} 
+        active="Dashboard"
+        items={['Dashboard', 'My Schedule']}
       />
 
       <div className="app-details-container">
         <div className="content-wrapper">
-          
+
           <div className="back-link-container">
             <Link to="/dashboard/doctor" className="back-link">
               &lt; Back to Dashboard
@@ -159,8 +152,8 @@ export default function AppointmentDetails() {
           </div>
 
           <div className="action-footer" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
-              className="btn-begin" 
+            <button
+              className="btn-begin"
               onClick={handleBeginConsultation}
               disabled={!isToday()}
               style={{ opacity: isToday() ? 1 : 0.5, cursor: isToday() ? 'pointer' : 'not-allowed' }}

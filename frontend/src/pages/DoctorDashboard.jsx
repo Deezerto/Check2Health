@@ -1,40 +1,31 @@
 import DashboardNav from '../components/DashboardNav'
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import api from '../api'
 
 export default function DoctorDashboard() {
   const navigate = useNavigate()
+  const { user, loading } = useAuth()
   const [appointments, setAppointments] = useState([])
   const [upcoming, setUpcoming] = useState([])
-  const [user, setUser] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('auth.user')
-      if (!raw) {
-        navigate('/login')
-        return
-      }
-      const u = JSON.parse(raw)
-      setUser(u)
-      if (u.role && u.role !== 'DOCTOR') {
-        navigate('/dashboard/patient')
-      }
-    } catch {
+    if (loading) return
+    if (!user) {
       navigate('/login')
+      return
     }
-  }, [navigate])
+    if (user.role && user.role !== 'DOCTOR') {
+      navigate('/dashboard/patient')
+    }
+  }, [user, loading, navigate])
 
   useEffect(() => {
-    if (user) {
-      fetch(`/api/reservations/doctor/${user.doctorId}`)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.json()
-        })
+    if (user && user.doctorId) {
+      api.get(`/reservations/doctor/${user.doctorId}`)
+        .then(response => response.data)
         .then(data => {
           // Use local date for comparison to avoid timezone issues
           const today = new Date()
@@ -58,9 +49,9 @@ export default function DoctorDashboard() {
 
           const upcomingAppointments = data.filter(appointment => {
             const appointmentDate = appointment.reservationDate.split('T')[0];
-            return appointment.reservationStatus === 'CONFIRMED' && 
-                   appointmentDate >= tomorrowStr && 
-                   appointmentDate <= endOfWeekStr;
+            return appointment.reservationStatus === 'CONFIRMED' &&
+              appointmentDate >= tomorrowStr &&
+              appointmentDate <= endOfWeekStr;
           });
 
           const formatApt = (list) => list.map(appointment => ({
@@ -75,8 +66,8 @@ export default function DoctorDashboard() {
           setUpcoming(formatApt(upcomingAppointments));
         })
         .catch(error => {
-            console.error('Error fetching appointments:', error)
-            setError('Failed to fetch appointments. Please try again later.')
+          console.error('Error fetching appointments:', error)
+          setError('Failed to fetch appointments. Please try again later.')
         });
     }
   }, [user]);

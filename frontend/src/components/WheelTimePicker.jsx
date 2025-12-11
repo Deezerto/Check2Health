@@ -28,7 +28,7 @@ const styles = {
         boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
     },
     triggerBtnActive: {
-        borderColor: '#2563eb',
+        border: '1px solid #2563eb', // Explicitly set border to avoid shorthand conflict
         boxShadow: '0 0 0 2px rgba(37, 99, 235, 0.1)'
     },
     overlay: {

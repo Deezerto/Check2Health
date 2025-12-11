@@ -106,15 +106,14 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedAdmin() {
         String email = "admin@check2health.local";
-        if (staffRepository.existsByEmailIgnoreCase(email)) {
-            return; // already seeded
-        }
-        Staff admin = new Staff();
+        Staff admin = staffRepository.findByEmailIgnoreCase(email).orElse(new Staff());
+
         admin.setFirstName("Admin");
         admin.setLastName("User");
         admin.setEmail(email);
         admin.setUsername("admin");
         admin.setPassword(passwordEncoder.encode("AdminPass123!"));
+
         staffRepository.save(admin);
     }
 }

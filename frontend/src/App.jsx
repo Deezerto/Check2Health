@@ -37,13 +37,13 @@ export default function App() {
       <Route path="/dashboard/patient/appointments" element={<MyAppointments />} />
       {/* Add new route for patient consultation details */}
       <Route path="/dashboard/patient/appointments/:id" element={<ConsultationDetails />} />
-      
+
       {/* Staff and Admin Routes */}
       <Route path="/dashboard/staff" element={<StaffDashboard />} />
       <Route path="/dashboard/staff/appointments" element={<StaffAppointments />} />
       <Route path="/dashboard/staff/schedules" element={<StaffSchedules />} />
       <Route path="/dashboard/staff/analytics" element={<StaffAnalytics />} />
-      
+
       {/* Admin Only Routes */}
       <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
         <Route path="/dashboard/staff/register-doctor" element={<RegisterDoctor />} />

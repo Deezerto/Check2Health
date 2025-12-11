@@ -42,7 +42,7 @@ public class AuthService {
         this.emailService = emailService;
     }
 
-    public Map<String, Object> login(LoginRequest request, HttpServletRequest httpServletRequest) {
+    public Map<String, Object> login(LoginRequest request) {
         if (request == null || request.identifier() == null || request.password() == null) {
             throw new ResponseStatusException(BAD_REQUEST, "Missing credentials");
         }
@@ -54,24 +54,7 @@ public class AuthService {
 
         if (pOpt.isPresent()) {
             Patient patient = pOpt.get();
-            boolean passwordMatches = false;
-            if (patient.getPassword() != null) {
-                if (passwordEncoder.matches(request.password(), patient.getPassword())) {
-                    passwordMatches = true;
-                }
-            }
-
-            if (passwordMatches) {
-                // Manually create a security context
-                List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_PATIENT"));
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(patient.getEmail(), null, authorities);
-                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-                securityContext.setAuthentication(authentication);
-                SecurityContextHolder.setContext(securityContext);
-                HttpSession session = httpServletRequest.getSession(true);
-                session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, securityContext);
-
-
+            if (patient.getPassword() != null && passwordEncoder.matches(request.password(), patient.getPassword())) {
                 // Patient found and password is correct.
                 Map<String, Object> response = new HashMap<>();
                 response.put("ok", true);
@@ -90,7 +73,6 @@ public class AuthService {
                 response.put("province", patient.getProvince() != null ? patient.getProvince() : "");
                 return response;
             } else {
-                // Patient found, but password incorrect. Fail fast.
                 throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
             }
         }
@@ -99,23 +81,7 @@ public class AuthService {
         Optional<Doctor> dOpt = doctorRepository.findByEmailIgnoreCase(id);
         if (dOpt.isPresent()) {
             Doctor doctor = dOpt.get();
-            boolean passwordMatches = false;
-            if (doctor.getPassword() != null) {
-                if (passwordEncoder.matches(request.password(), doctor.getPassword())) {
-                    passwordMatches = true;
-                }
-            }
-
-            if (passwordMatches) {
-                 // Manually create a security context
-                List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_DOCTOR"));
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(doctor.getEmail(), null, authorities);
-                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-                securityContext.setAuthentication(authentication);
-                SecurityContextHolder.setContext(securityContext);
-                HttpSession session = httpServletRequest.getSession(true);
-                session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, securityContext);
-
+            if (doctor.getPassword() != null && passwordEncoder.matches(request.password(), doctor.getPassword())) {
                 return Map.of(
                         "ok", true,
                         "role", "DOCTOR",
@@ -125,7 +91,6 @@ public class AuthService {
                         "email", doctor.getEmail() != null ? doctor.getEmail() : "",
                         "medicalRole", doctor.getMedicalRole() != null ? doctor.getMedicalRole() : "");
             } else {
-                // Doctor found, but password incorrect. Fail fast.
                 throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
             }
         }
@@ -133,37 +98,21 @@ public class AuthService {
         // Check for Staff
         Optional<Staff> sOpt = staffRepository.findByEmailIgnoreCase(id);
         if (sOpt.isPresent()) {
-            Staff staff = sOpt.get();
-            boolean passwordMatches = false;
-            if (staff.getPassword() != null) {
-                if (passwordEncoder.matches(request.password(), staff.getPassword())) {
-                    passwordMatches = true;
-                }
-            }
-
-            if (passwordMatches) {
+            Staff s = sOpt.get();
+            if (s.getPassword() != null && passwordEncoder.matches(request.password(), s.getPassword())) {
                 String role = "STAFF";
-                if ("admin@check2health.local".equalsIgnoreCase(staff.getEmail())) {
+                if ("admin@check2health.local".equalsIgnoreCase(s.getEmail())) {
                     role = "ADMIN";
                 }
 
-                // Manually create a security context
-                List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(staff.getEmail(), null, authorities);
-                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-                securityContext.setAuthentication(authentication);
-                SecurityContextHolder.setContext(securityContext);
-                HttpSession session = httpServletRequest.getSession(true);
-                session.setAttribute(SPRING_SECURITY_CONTEXT_KEY, securityContext);
-                
                 return Map.of(
                         "ok", true,
                         "role", role,
-                        "staffId", staff.getStaffID(),
-                        "firstName", staff.getFirstName(),
-                        "lastName", staff.getLastName(),
-                        "email", staff.getEmail() != null ? staff.getEmail() : "",
-                        "username", staff.getUsername() != null ? staff.getUsername() : "");
+                        "staffId", s.getStaffID(),
+                        "firstName", s.getFirstName(),
+                        "lastName", s.getLastName(),
+                        "email", s.getEmail() != null ? s.getEmail() : "",
+                        "username", s.getUsername() != null ? s.getUsername() : "");
             } else {
                 throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
             }
@@ -171,6 +120,64 @@ public class AuthService {
 
         // If we reach here, no user was found at all with the given identifier.
         throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
+    }
+
+    public Map<String, Object> getUserDetails(String identifier) {
+        // Try patient
+        Optional<Patient> pOpt = patientRepository.findByEmailIgnoreCase(identifier); // JWT subject is email
+        if (pOpt.isPresent()) {
+            Patient patient = pOpt.get();
+            Map<String, Object> response = new HashMap<>();
+            response.put("ok", true);
+            response.put("role", "PATIENT");
+            response.put("patientId", patient.getPatientID());
+            response.put("firstName", patient.getFirstName());
+            response.put("lastName", patient.getLastName());
+            response.put("username", patient.getUsername());
+            response.put("email", patient.getEmail() != null ? patient.getEmail() : "");
+            response.put("phoneNumber", patient.getPhoneNumber() != null ? patient.getPhoneNumber() : "");
+            response.put("dateOfBirth",
+                    patient.getDateOfBirth() != null ? patient.getDateOfBirth().toString() : "");
+            response.put("street", patient.getStreet() != null ? patient.getStreet() : "");
+            response.put("barangay", patient.getBarangay() != null ? patient.getBarangay() : "");
+            response.put("municipality", patient.getMunicipality() != null ? patient.getMunicipality() : "");
+            response.put("province", patient.getProvince() != null ? patient.getProvince() : "");
+            return response;
+        }
+
+        // Try doctor
+        Optional<Doctor> dOpt = doctorRepository.findByEmailIgnoreCase(identifier);
+        if (dOpt.isPresent()) {
+            Doctor doctor = dOpt.get();
+            return Map.of(
+                    "ok", true,
+                    "role", "DOCTOR",
+                    "doctorId", doctor.getDoctorID(),
+                    "firstName", doctor.getFirstName(),
+                    "lastName", doctor.getLastName(),
+                    "email", doctor.getEmail() != null ? doctor.getEmail() : "",
+                    "medicalRole", doctor.getMedicalRole() != null ? doctor.getMedicalRole() : "");
+        }
+
+        // Try staff
+        Optional<Staff> sOpt = staffRepository.findByEmailIgnoreCase(identifier);
+        if (sOpt.isPresent()) {
+            Staff s = sOpt.get();
+            String role = "STAFF";
+            if ("admin@check2health.local".equalsIgnoreCase(s.getEmail())) {
+                role = "ADMIN";
+            }
+            return Map.of(
+                    "ok", true,
+                    "role", role,
+                    "staffId", s.getStaffID(),
+                    "firstName", s.getFirstName(),
+                    "lastName", s.getLastName(),
+                    "email", s.getEmail() != null ? s.getEmail() : "",
+                    "username", s.getUsername() != null ? s.getUsername() : "");
+        }
+
+        throw new ResponseStatusException(UNAUTHORIZED, "User not found");
     }
 
     public void forgotPassword(String email) {
@@ -206,7 +213,8 @@ public class AuthService {
             emailService.sendPasswordResetEmail(staff.getEmail(), token);
         }
 
-        // We don't throw an error if the user is not found to prevent email enumeration.
+        // We don't throw an error if the user is not found to prevent email
+        // enumeration.
     }
 
     public void resetPassword(String token, String newPassword) {

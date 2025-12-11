@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardNav from '../components/DashboardNav'
 import AiConciergeWidget from '../components/AiConciergeWidget'
+import { useAuth } from '../context/AuthContext'
+import api from '../api'
 
 export default function BookAppointment() {
   const navigate = useNavigate()
+  const { user, loading } = useAuth()
   const [step, setStep] = useState(1)
 
-  // Auth State
-  const [userName, setUserName] = useState('User')
+  // Derived State
+  const userName = user ? ([user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'User') : 'User'
 
   // Calendar & Booking State
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -19,7 +22,7 @@ export default function BookAppointment() {
   const [allSchedules, setAllSchedules] = useState([])
   const [availabilitySlots, setAvailabilitySlots] = useState({ morning: [], afternoon: [], evening: [] })
   const [selectedSlot, setSelectedSlot] = useState(null)
-  const [bookedSlots, setBookedSlots] = useState([]) // New state for booked slots
+  const [bookedSlots, setBookedSlots] = useState([])
 
   // Form Data State
   const [formData, setFormData] = useState({
@@ -31,26 +34,11 @@ export default function BookAppointment() {
     currentMedications: ''
   })
 
-  // Auth Check
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('auth.user')
-      if (!raw) {
-        navigate('/login')
-        return
-      }
-      const u = JSON.parse(raw)
-      const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.username || 'User'
-      setUserName(name)
-    } catch {
-      navigate('/login')
-    }
-  }, [navigate])
 
   // Fetch Schedules & Doctors
   useEffect(() => {
-    fetch('/api/schedules')
-      .then(r => r.ok ? r.json() : [])
+    api.get('/schedules')
+      .then(r => r.data)
       .then(list => {
         setAllSchedules(list)
 
@@ -84,8 +72,8 @@ export default function BookAppointment() {
       return
     }
 
-    fetch(`/api/reservations/doctor/${selectedDoctor}`)
-      .then(res => res.json())
+    api.get(`/reservations/doctor/${selectedDoctor}`)
+      .then(res => res.data)
       .then(data => {
         // Store booked dates for this doctor
         // Filter out Cancelled/Denied
@@ -367,13 +355,11 @@ export default function BookAppointment() {
 
   const confirmBooking = async () => {
     try {
-      const raw = sessionStorage.getItem('auth.user')
-      if (!raw) {
+      if (!user) {
         alert('Please log in again')
         navigate('/login')
         return
       }
-      const user = JSON.parse(raw)
       const patientId = user.patientID || user.patientId || user.id
 
       const preConsultationData = {
@@ -392,18 +378,12 @@ export default function BookAppointment() {
         preConsultationData: JSON.stringify(preConsultationData)
       }
 
-      const res = await fetch('/api/reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-
-      if (!res.ok) throw new Error('Failed to create reservation')
+      await api.post('/reservations', payload)
 
       alert('Booking submitted! Your appointment is pending approval.')
       navigate('/dashboard/patient')
     } catch (err) {
-      alert('Failed to create booking: ' + err.message)
+      alert('Failed to create booking: ' + (err.response?.data?.message || err.message))
     }
   }
 

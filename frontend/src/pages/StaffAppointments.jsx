@@ -9,6 +9,7 @@ import AlreadyApprovedModal from '../components/AlreadyApprovedModal'
 import AlreadyDeniedModal from '../components/AlreadyDeniedModal'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 
 
@@ -64,7 +65,7 @@ export default function StaffAppointments() {
 
     const [appointments, setAppointments] = useState([])
     const [staffName, setStaffName] = useState('')
-    
+
     // Filter States
     const [doctors, setDoctors] = useState([])
     const [searchName, setSearchName] = useState('')
@@ -73,19 +74,14 @@ export default function StaffAppointments() {
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
 
+    const { user, loading } = useAuth()
+
     useEffect(() => {
-        const raw = sessionStorage.getItem('auth.user')
-        if (!raw) { navigate('/login') }
-        else {
-            try {
-                const user = JSON.parse(raw);
-                if (user.role !== 'STAFF' && user.role !== 'ADMIN') {
-                    navigate('/login');
-                } else {
-                    setStaffName(`${user.firstName} ${user.lastName}`)
-                }
-            } catch (e) {
-                navigate('/login');
+        if (!loading) {
+            if (user && (user.role === 'STAFF' || user.role === 'ADMIN')) {
+                setStaffName(`${user.firstName} ${user.lastName}`)
+            } else {
+                navigate('/login')
             }
         }
 
@@ -113,25 +109,25 @@ export default function StaffAppointments() {
                 setAppointments(formatted)
             })
             .catch(err => console.error('Failed to fetch appointments:', err))
-    }, [navigate])
+    }, [navigate, user, loading])
 
     // Filter Logic
     const filteredAppointments = appointments.filter(apt => {
         const matchName = apt.name.toLowerCase().includes(searchName.toLowerCase())
-        
+
         const matchDoctor = selectedDoctor === '' || (apt.raw.doctor && apt.raw.doctor.doctorId.toString() === selectedDoctor)
-        
+
         const matchStatus = selectedStatus === '' || apt.status.toLowerCase() === selectedStatus.toLowerCase()
-        
+
         let matchDate = true
         const aptDate = new Date(apt.raw.reservationDate)
-        
+
         if (startDate) {
             const start = new Date(startDate)
             start.setHours(0, 0, 0, 0)
             matchDate = matchDate && aptDate >= start
         }
-        
+
         if (endDate) {
             const end = new Date(endDate)
             end.setHours(23, 59, 59, 999)
@@ -352,8 +348,8 @@ export default function StaffAppointments() {
                         />
 
                         <div className="select-wrapper" style={{ position: 'relative' }}>
-                            <select 
-                                className="input" 
+                            <select
+                                className="input"
                                 value={selectedDoctor}
                                 onChange={(e) => setSelectedDoctor(e.target.value)}
                                 style={{ backgroundColor: '#fff', borderColor: '#e2e8f0', appearance: 'none' }}
@@ -369,8 +365,8 @@ export default function StaffAppointments() {
                         </div>
 
                         <div className="select-wrapper" style={{ position: 'relative' }}>
-                            <select 
-                                className="input" 
+                            <select
+                                className="input"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
                                 style={{ backgroundColor: '#fff', borderColor: '#e2e8f0', appearance: 'none' }}

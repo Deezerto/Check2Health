@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import DashboardNav from '../components/DashboardNav';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function StaffAnalytics() {
     const navigate = useNavigate();
@@ -10,19 +11,14 @@ export default function StaffAnalytics() {
     const [loading, setLoading] = useState(true);
     const [selectedDoctor, setSelectedDoctor] = useState('');
 
+    const { user, loading: authLoading } = useAuth();
+
     useEffect(() => {
-        const raw = sessionStorage.getItem('auth.user');
-        if (!raw) { navigate('/login'); }
-        else {
-            try {
-                const user = JSON.parse(raw);
-                if (user.role !== 'STAFF' && user.role !== 'ADMIN') {
-                    navigate('/login');
-                } else {
-                    setStaffName(`${user.firstName} ${user.lastName}`);
-                }
-            } catch (e) {
-                navigate('/login');
+        if (!authLoading) {
+            if (user && (user.role === 'STAFF' || user.role === 'ADMIN')) {
+                setStaffName(`${user.firstName} ${user.lastName}`)
+            } else {
+                navigate('/login')
             }
         }
 
@@ -37,7 +33,7 @@ export default function StaffAnalytics() {
             console.error("Failed to fetch analytics data", err);
             setLoading(false);
         });
-    }, [navigate]);
+    }, [navigate, user, authLoading]);
 
     // --- Data Processing ---
 
@@ -155,8 +151,8 @@ export default function StaffAnalytics() {
                             <div>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#000', marginBottom: '8px' }}>Filter by Doctor</label>
                                 <div className="select-wrapper" style={{ position: 'relative' }}>
-                                    <select 
-                                        className="input" 
+                                    <select
+                                        className="input"
                                         value={selectedDoctor}
                                         onChange={(e) => setSelectedDoctor(e.target.value)}
                                         style={{
@@ -294,7 +290,7 @@ export default function StaffAnalytics() {
                                     {/* Cancelled - Red */}
                                     <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="#ef4444" strokeWidth="6"
                                         strokeDasharray={`${statusData.percentages.CANCELLED} 100`} strokeDashoffset={`-${statusData.percentages.CONFIRMED + statusData.percentages.COMPLETED}`} />
-                                    
+
                                     {/* Pending - Yellow */}
                                     <circle cx="20" cy="20" r="15.9155" fill="transparent" stroke="#f59e0b" strokeWidth="6"
                                         strokeDasharray={`${statusData.percentages.PENDING} 100`} strokeDashoffset={`-${statusData.percentages.CONFIRMED + statusData.percentages.COMPLETED + statusData.percentages.CANCELLED}`} />

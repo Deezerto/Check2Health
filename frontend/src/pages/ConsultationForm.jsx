@@ -1,33 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import DashboardNav from '../components/DashboardNav';
+import { useAuth } from '../context/AuthContext';
 import '../components/ConsultationForm.css';
 
 export default function ConsultationForm() {
   const navigate = useNavigate();
   const { id } = useParams(); // Get appointment ID from URL
-  
+
   const [patientName, setPatientName] = useState("Loading Patient...");
   const [doctorNotes, setDoctorNotes] = useState('');
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(false); // For form submission
   const [fetchingData, setFetchingData] = useState(true); // For initial data fetch
   const [error, setError] = useState(null); // For fetch or submission errors
-  const [user, setUser] = useState(null); // For DashboardNav
+  const { user, loading: authLoading } = useAuth(); // For DashboardNav
 
   // Fetch logged-in user for DashboardNav
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('auth.user');
-      if (raw) {
-        setUser(JSON.parse(raw));
-      } else {
-        navigate('/login');
-      }
-    } catch {
+    if (!authLoading && !user) {
       navigate('/login');
     }
-  }, [navigate]);
+  }, [user, authLoading, navigate]);
 
   // Fetch appointment details to get patient name
   useEffect(() => {
@@ -118,15 +112,15 @@ export default function ConsultationForm() {
 
   return (
     <div className="consultation-page">
-      <DashboardNav 
+      <DashboardNav
         userName={`Dr. ${user?.firstName || ''} ${user?.lastName || ''}`}
-        active="Dashboard" 
-        items={['Dashboard', 'My Schedule']} 
+        active="Dashboard"
+        items={['Dashboard', 'My Schedule']}
       />
 
       <div className="consultation-container">
         <div className="consultation-content">
-          
+
           <h1 className="page-title">Consultation Notes: {patientName}</h1>
 
           {error && <div className="error-message">{error}</div>}
@@ -135,8 +129,8 @@ export default function ConsultationForm() {
           <div className="form-card">
             <h2 className="card-header">Doctor's Notes</h2>
             <p className="helper-text">Enter your diagnosis, observations, and advice for the patient.</p>
-            <textarea 
-              className="notes-area" 
+            <textarea
+              className="notes-area"
               placeholder="Patient presented with..."
               value={doctorNotes}
               onChange={(e) => setDoctorNotes(e.target.value)}
@@ -147,10 +141,10 @@ export default function ConsultationForm() {
           {/* Prescriptions Card */}
           <div className="form-card">
             <div className="card-header-row">
-              <h2 className="card-header" style={{marginBottom:0}}>Prescriptions</h2>
+              <h2 className="card-header" style={{ marginBottom: 0 }}>Prescriptions</h2>
               <button className="btn-add-presc" onClick={addPrescription}>+ Add Prescription</button>
             </div>
-            
+
             <div className="prescriptions-list">
               {prescriptions.length === 0 ? (
                 <div className="empty-state">No prescriptions added.</div>
@@ -158,21 +152,21 @@ export default function ConsultationForm() {
                 prescriptions.map((p, index) => (
                   <div key={index} className="prescription-item">
                     <div className="presc-row">
-                      <input 
-                        placeholder="Medication Name" 
+                      <input
+                        placeholder="Medication Name"
                         value={p.medicationName}
                         onChange={(e) => updatePrescription(index, 'medicationName', e.target.value)}
                         className="input-field"
                       />
-                      <input 
-                        placeholder="Dosage (e.g. 500mg)" 
+                      <input
+                        placeholder="Dosage (e.g. 500mg)"
                         value={p.dosage}
                         onChange={(e) => updatePrescription(index, 'dosage', e.target.value)}
                         className="input-field"
                       />
                     </div>
-                    <input 
-                      placeholder="Instructions (e.g. Twice a day after meals)" 
+                    <input
+                      placeholder="Instructions (e.g. Twice a day after meals)"
                       value={p.instructions}
                       onChange={(e) => updatePrescription(index, 'instructions', e.target.value)}
                       className="input-field full-width"
@@ -186,15 +180,15 @@ export default function ConsultationForm() {
 
           {/* Action Buttons */}
           <div className="action-buttons">
-            <button 
-              className="btn-cancel" 
+            <button
+              className="btn-cancel"
               onClick={() => navigate(-1)} // Go back to the previous page (Appointment Details)
               disabled={loading}
             >
               Cancel
             </button>
-            <button 
-              className="btn-complete" 
+            <button
+              className="btn-complete"
               onClick={handleCompleteAppointment}
               disabled={loading}
             >

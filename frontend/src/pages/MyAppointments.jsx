@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import DashboardNav from '../components/DashboardNav';
 
 // --- Helper Hooks and Functions (from original file, no changes needed) ---
@@ -62,48 +63,50 @@ function getStatusLabel(status) {
 }
 
 // --- Main Component ---
+// --- Main Component ---
 export default function MyAppointments() {
   const navigate = useNavigate();
-  const { full } = useUserName();
+  const { user, loading: authLoading } = useAuth(); // Use AuthContext
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'upcoming');
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('auth.user');
-      if (!raw) {
-        navigate('/login');
-        return;
-      }
-      const user = JSON.parse(raw);
-      const patientId = user.patientID || user.patientId || user.id;
-      if (!patientId) {
-        navigate('/login'); // No patient ID found
-        return;
-      }
+  // Derive display name securely from context
+  const displayName = useMemo(() => {
+    if (!user) return 'User';
+    return [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'User';
+  }, [user]);
 
-      fetch(`/api/reservations/patient/${patientId}`)
-        .then(r => (r.ok ? r.json() : Promise.resolve([])))
-        .then(data => {
-          // Sort by date descending before setting
-          data.sort((a, b) => new Date(b.reservationDate) - new Date(a.reservationDate));
-          setAppointments(data);
-          setLoading(false);
-        })
-        .catch(() => {
-          setAppointments([]);
-          setLoading(false);
-        });
-    } catch {
+  useEffect(() => {
+    if (authLoading) return; // Wait for auth check
+    if (!user) {
       navigate('/login');
+      return;
     }
-  }, [navigate]);
+
+    const patientId = user.patientID || user.patientId || user.id;
+    if (!patientId) {
+      navigate('/login');
+      return;
+    }
+
+    fetch(`/api/reservations/patient/${patientId}`)
+      .then(r => (r.ok ? r.json() : Promise.resolve([])))
+      .then(data => {
+        data.sort((a, b) => new Date(b.reservationDate) - new Date(a.reservationDate));
+        setAppointments(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setAppointments([]);
+        setLoading(false);
+      });
+  }, [user, authLoading, navigate]);
 
   // --- REFACTORED: Filter logic based on status ---
   const upcoming = appointments.filter(a =>
-    a.reservationStatus?.toUpperCase() === 'PENDING' || 
+    a.reservationStatus?.toUpperCase() === 'PENDING' ||
     a.reservationStatus?.toUpperCase() === 'CONFIRMED' ||
     a.reservationStatus?.toUpperCase() === 'RESCHEDULED'
   );
@@ -116,12 +119,12 @@ export default function MyAppointments() {
 
   return (
     <div className="dash-bg">
-      <DashboardNav userName={full} active="My Appointments" items={["Dashboard", "My Appointments"]} role="PATIENT" />
+      <DashboardNav userName={displayName} active="My Appointments" items={["Dashboard", "My Appointments"]} role="PATIENT" />
 
       <main className="dash-main" style={{ display: 'flex', justifyContent: 'center', paddingTop: '40px' }}>
         <div className="appointments-card" style={{ maxWidth: '800px' }}>
           <h2 className="appointments-header">My Appointments</h2>
-          
+
           <div className="appointments-tabs">
             <button
               className={`appointments-tab ${activeTab === 'upcoming' ? 'active' : ''}`}

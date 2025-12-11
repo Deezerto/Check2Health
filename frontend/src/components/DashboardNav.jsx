@@ -1,22 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
 import ProfileModal from './ProfileModal'
-
-function getSessionName() {
-  try {
-    const raw = sessionStorage.getItem('auth.user')
-    if (!raw) return null
-    const u = JSON.parse(raw)
-    const fn = [u.firstName, u.lastName].filter(Boolean).join(' ').trim()
-    return fn || u.username || null
-  } catch {
-    return null
-  }
-}
-
+import { useAuth } from '../context/AuthContext'
 
 export default function DashboardNav({ userName = 'User', active = 'Dashboard', items = [], role = '' }) {
-  const name = userName && userName !== 'User' ? userName : (getSessionName() || 'User')
+  const { user, logout } = useAuth()
+
+  // Derive display name from context user, or fallback to props
+  const displayName = user
+    ? ([user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username)
+    : (userName !== 'User' ? userName : 'User')
+
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const navRef = useRef(null)
@@ -31,30 +25,23 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
     return () => window.removeEventListener('mousedown', onClick)
   }, [open])
 
-  function logout() {
-    sessionStorage.removeItem('auth.user')
+  async function handleLogout() {
+    await logout()
     navigate('/')
   }
 
   function getUserProfile() {
-    try {
-      const raw = sessionStorage.getItem('auth.user')
-      if (!raw) return {}
-      const u = JSON.parse(raw)
-      // Map backend fields to profile modal fields
-      return {
-        name: [u.firstName, u.lastName].filter(Boolean).join(' ').trim(),
-        email: u.email,
-        contactNumber: u.contactNumber,
-        birthDate: u.birthDate,
-        street: u.street,
-        barangay: u.barangay,
-        municipality: u.municipality,
-        province: u.province,
-        profilePic: u.profilePic
-      }
-    } catch {
-      return {}
+    if (!user) return {}
+    return {
+      name: [user.firstName, user.lastName].filter(Boolean).join(' ').trim(),
+      email: user.email,
+      contactNumber: user.phoneNumber, // Backend sends phoneNumber, frontend expected contactNumber?
+      birthDate: user.dateOfBirth,
+      street: user.street,
+      barangay: user.barangay,
+      municipality: user.municipality,
+      province: user.province,
+      profilePic: user.profilePic // Backend might not send this yet
     }
   }
 
@@ -86,12 +73,12 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
           <div className="db-user" ref={navRef} style={{ position: 'relative' }}>
             <button className="avatar-btn" onClick={() => setOpen(v => !v)}>
               <span className="avatar">👤</span>
-              <span className="name">{name}</span>
+              <span className="name">{displayName}</span>
             </button>
             {open && (
               <div className="profile-menu">
                 <button className="profile-menu-item profile-view" onClick={() => { setProfileOpen(true); setOpen(false) }}>View Profile</button>
-                <button className="profile-menu-item profile-logout" onClick={logout}>Logout</button>
+                <button className="profile-menu-item profile-logout" onClick={handleLogout}>Logout</button>
               </div>
             )}
           </div>
@@ -103,13 +90,8 @@ export default function DashboardNav({ userName = 'User', active = 'Dashboard', 
           open={profileOpen}
           onClose={() => setProfileOpen(false)}
           onSave={(data) => {
-            // Save logic here (e.g., update sessionStorage, call backend)
-            const raw = sessionStorage.getItem('auth.user')
-            if (raw) {
-              const u = JSON.parse(raw)
-              const updated = { ...u, ...data }
-              sessionStorage.setItem('auth.user', JSON.stringify(updated))
-            }
+            // TODO: Implement backend update for profile
+            console.warn("Profile update not implemented in backend yet. Changes are volatile.")
             setProfileOpen(false)
           }}
         />

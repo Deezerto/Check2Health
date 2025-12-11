@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
 
@@ -7,11 +8,11 @@ export default function Login() {
   const [error, setError] = useState("")
   const navigate = useNavigate()
   const location = useLocation()
+  const { login } = useAuth()
 
   useEffect(() => {
     if (location.state?.message) {
       alert(location.state.message)
-      // Clear state to prevent showing alert again on refresh (replace history)
       window.history.replaceState({}, document.title)
     }
   }, [location])
@@ -20,53 +21,22 @@ export default function Login() {
     e.preventDefault()
     setError("")
     const form = e.currentTarget
-    const payload = {
-      identifier: form.identifier.value,
-      password: form.password.value,
-    }
+
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      if (!res.ok) {
-        let msg = 'Login failed'
-        const contentType = res.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            const data = await res.json()
-            msg = data.message || data.error || msg
-          } catch {
-            // ignore json parse error
-          }
-        } else {
-          try {
-            const txt = await res.text()
-            if (txt && txt.length < 200) msg = txt
-          } catch {
-            // ignore text read error
-          }
-        }
-        
-        if (msg.includes('Invalid credentials') || msg === 'Unauthorized') msg = 'Invalid email/username or password.'
-        setError(msg)
-        return
-      }
-      const data = await res.json()
-      sessionStorage.setItem('auth.user', JSON.stringify(data))
+      const data = await login(form.identifier.value, form.password.value)
+
       if (data.role === 'DOCTOR') {
         navigate('/dashboard/doctor')
       } else if (data.role === 'PATIENT') {
         navigate('/dashboard/patient')
-      } else if (data.role === 'STAFF' || data.role === 'ADMIN') { // Redirect ADMIN to staff dashboard
+      } else if (data.role === 'STAFF' || data.role === 'ADMIN') {
         navigate('/dashboard/staff')
       } else {
-        // Fallback to patient dashboard if role not provided or unrecognized
         navigate('/dashboard/patient')
       }
     } catch (err) {
-      setError('Network error. Please try again.')
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Login failed. Please check your credentials.'
+      setError(msg.includes('Invalid') || msg === 'Unauthorized' ? 'Invalid email/username or password.' : msg)
     }
   }
 
@@ -75,9 +45,9 @@ export default function Login() {
       <div className="auth-card login-redesign">
         <div className="auth-card-inner">
           <img src="/assets/logo.png" alt="Check2Health" className="auth-logo" />
-          <h1 className="auth-title" style={{fontWeight:800, fontSize:'2.2rem', marginTop:'10px', marginBottom:'18px'}}>Sign In</h1>
+          <h1 className="auth-title" style={{ fontWeight: 800, fontSize: '2.2rem', marginTop: '10px', marginBottom: '18px' }}>Sign In</h1>
 
-          <form className="form-grid" onSubmit={submit} style={{gap:'16px'}}>
+          <form className="form-grid" onSubmit={submit} style={{ gap: '16px' }}>
             <label className="form-label">Email Address
               <input name="identifier" type="email" className="input" required />
             </label>
@@ -92,18 +62,18 @@ export default function Login() {
                 />
                 <button type="button" className="input-action" onClick={() => setShow((s) => !s)}>{show ? 'Hide' : 'Show'}</button>
               </div>
-              <div style={{marginTop:'4px',textAlign:'right',fontSize:'.8rem'}}>
-                <Link to="/forgot-password" style={{color:'#2563eb',textDecoration:'none'}}>Forgot Password?</Link>
+              <div style={{ marginTop: '4px', textAlign: 'right', fontSize: '.8rem' }}>
+                <Link to="/forgot-password" style={{ color: '#2563eb', textDecoration: 'none' }}>Forgot Password?</Link>
               </div>
             </label>
 
-            <button className="btn btn-blue auth-primary" type="submit" style={{marginTop:'18px',fontSize:'1.15rem'}}>LOG IN</button>
-            {error && <div className="form-error" style={{color:'#dc2626',marginTop:'10px',fontWeight:600}}>{error}</div>}
+            <button className="btn btn-blue auth-primary" type="submit" style={{ marginTop: '18px', fontSize: '1.15rem' }}>LOG IN</button>
+            {error && <div className="form-error" style={{ color: '#dc2626', marginTop: '10px', fontWeight: 600 }}>{error}</div>}
           </form>
-          <div style={{marginTop:'18px',textAlign:'center',fontSize:'.98rem',color:'#64748b'}}>
-            Don't have an account? <Link to="/register" style={{color:'#2563eb',fontWeight:600}}>Register here</Link>
+          <div style={{ marginTop: '18px', textAlign: 'center', fontSize: '.98rem', color: '#64748b' }}>
+            Don't have an account? <Link to="/register" style={{ color: '#2563eb', fontWeight: 600 }}>Register here</Link>
           </div>
-          <div className="auth-return" style={{marginTop:'10px',textAlign:'left'}}>
+          <div className="auth-return" style={{ marginTop: '10px', textAlign: 'left' }}>
             <Link to="/">← Return to Home</Link>
           </div>
         </div>

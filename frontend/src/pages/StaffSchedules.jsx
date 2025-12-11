@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardNav from '../components/DashboardNav';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import WheelTimePicker from '../components/WheelTimePicker';
@@ -8,6 +9,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 export default function StaffSchedules() {
     const navigate = useNavigate();
+    const { user, loading: authLoading } = useAuth();
 
     const [doctors, setDoctors] = useState([]);
     const [selectedDoctorId, setSelectedDoctorId] = useState('');
@@ -34,22 +36,18 @@ export default function StaffSchedules() {
     })));
 
     useEffect(() => {
-        const raw = sessionStorage.getItem('auth.user');
-        if (!raw) { navigate('/login'); }
-        else {
-            try {
-                const user = JSON.parse(raw);
-                if (user.role !== 'STAFF' && user.role !== 'ADMIN') {
-                    navigate('/login');
-                } else {
-                    setStaffName(`${user.firstName} ${user.lastName}`);
-                }
-            } catch (e) {
-                navigate('/login');
-            }
+        if (authLoading) return;
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+        if (user.role !== 'STAFF' && user.role !== 'ADMIN') {
+            navigate('/login');
+        } else {
+            setStaffName(`${user.firstName} ${user.lastName}`);
         }
         fetchDoctors();
-    }, [navigate]);
+    }, [user, authLoading, navigate]);
 
     const fetchDoctors = async () => {
         try {

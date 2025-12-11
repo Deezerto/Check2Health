@@ -1,4 +1,8 @@
 package com.appdev.lastico.check2health.DTO;
 
-public record LoginRequest(String identifier, String password) {
+import jakarta.validation.constraints.NotBlank;
+
+public record LoginRequest(
+        @NotBlank(message = "Identifier cannot be blank") String identifier,
+        @NotBlank(message = "Password cannot be blank") String password) {
 }
